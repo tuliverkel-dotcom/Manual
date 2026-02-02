@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Printer, Download, ArrowLeft, HelpCircle, Palette } from 'lucide-react';
+import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon } from 'lucide-react';
 import { ManualTheme } from '../types';
 
 interface ManualPreviewProps {
@@ -37,13 +37,20 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onBack, theme, o
           h1: "text-5xl font-black text-gray-900 tracking-tighter mb-8 pt-4 uppercase leading-none",
           h2: "text-2xl font-bold text-gray-900 mt-10 mb-4 flex items-center gap-4 before:content-[''] before:block before:w-6 before:h-6 before:bg-[#dc2626]",
           h3: "text-lg font-bold text-[#dc2626] mt-8 mb-2 uppercase tracking-widest border-b border-gray-200 pb-1",
+          // Table styles - Swiss
+          tableContainer: "my-8 w-full border-t-2 border-gray-900",
+          table: "min-w-full divide-y divide-gray-900",
           tableHeader: "bg-[#dc2626] text-white font-bold text-sm uppercase tracking-wider",
+          tableTh: "px-3 py-3 text-left border-r border-red-500 last:border-r-0",
+          tableBody: "bg-white divide-y divide-gray-200",
           tableRowEven: "bg-gray-50",
-          tableBorder: "border-2 border-gray-900",
+          tableTd: "px-3 py-2 text-sm text-gray-900 font-medium border-r border-gray-200 last:border-r-0",
+          
           blockquote: "border-l-[6px] border-[#dc2626] bg-gray-50 text-gray-900 p-6 my-8 font-medium italic shadow-sm",
           code: "bg-gray-100 text-[#dc2626] px-1.5 py-0.5 rounded-sm font-mono text-sm font-bold border border-gray-200",
           strong: "text-gray-900 font-black",
-          link: "text-[#dc2626] hover:text-[#b91c1c] underline decoration-2 underline-offset-2"
+          link: "text-[#dc2626] hover:text-[#b91c1c] underline decoration-2 underline-offset-2",
+          imagePlaceholder: "bg-gray-100 border-2 border-dashed border-[#dc2626] p-8 my-6 flex flex-col items-center justify-center text-center rounded-sm"
         };
       case 'industrial':
         return {
@@ -51,13 +58,20 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onBack, theme, o
           h1: "text-3xl font-black text-orange-600 uppercase border-b-4 border-black pb-2 mb-6 tracking-tight",
           h2: "text-2xl font-bold text-gray-900 border-l-8 border-orange-500 pl-3 uppercase tracking-wide mt-8 mb-4",
           h3: "text-lg font-bold text-gray-800 mt-6 mb-2 underline decoration-orange-400 decoration-2",
-          tableHeader: "bg-gray-900 text-white border-black uppercase text-sm",
-          tableRowEven: "bg-gray-100",
-          tableBorder: "border-2 border-black",
+          // Table styles - Industrial
+          tableContainer: "my-6 w-full border-2 border-black",
+          table: "min-w-full divide-y-2 divide-black",
+          tableHeader: "bg-gray-900 text-white uppercase text-xs tracking-widest",
+          tableTh: "px-4 py-2 text-left border-r border-gray-700 last:border-r-0",
+          tableBody: "bg-white divide-y divide-black",
+          tableRowEven: "bg-orange-50",
+          tableTd: "px-4 py-2 text-sm text-gray-800 border-r border-black last:border-r-0 font-mono",
+
           blockquote: "border-l-4 border-orange-500 bg-orange-50 text-gray-800 p-4 my-4 font-bold italic shadow-sm",
           code: "bg-gray-800 text-white px-2 py-0.5 rounded text-sm font-mono",
           strong: "text-orange-700 font-black",
-          link: "text-orange-600 underline hover:text-orange-800"
+          link: "text-orange-600 underline hover:text-orange-800",
+          imagePlaceholder: "bg-gray-200 border-2 border-black p-6 my-6 flex flex-col items-center justify-center text-center"
         };
       case 'elegant':
         return {
@@ -65,13 +79,20 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onBack, theme, o
           h1: "text-4xl font-normal text-emerald-900 border-b border-emerald-200 pb-4 mb-8 italic text-center",
           h2: "text-2xl font-normal text-emerald-800 mt-8 mb-4 flex items-center gap-2",
           h3: "text-xl font-medium text-emerald-700 mt-6 mb-2 italic",
-          tableHeader: "bg-emerald-50 text-emerald-900 border-emerald-200 font-normal border-b-2",
-          tableRowEven: "bg-slate-50",
-          tableBorder: "border border-gray-200",
+          // Table styles - Elegant
+          tableContainer: "my-8 w-full border border-emerald-100 rounded-lg overflow-hidden shadow-sm",
+          table: "min-w-full divide-y divide-emerald-100",
+          tableHeader: "bg-emerald-50 text-emerald-900 font-normal",
+          tableTh: "px-6 py-3 text-left",
+          tableBody: "bg-white divide-y divide-emerald-50",
+          tableRowEven: "bg-[#fafcfb]",
+          tableTd: "px-6 py-3 text-sm text-emerald-800",
+
           blockquote: "border-l-2 border-emerald-300 bg-emerald-50/50 text-emerald-800 p-6 my-6 italic text-lg relative",
           code: "bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 font-sans text-sm",
           strong: "text-emerald-900 font-semibold",
-          link: "text-emerald-600 border-b border-emerald-300 hover:text-emerald-800 no-underline"
+          link: "text-emerald-600 border-b border-emerald-300 hover:text-emerald-800 no-underline",
+          imagePlaceholder: "bg-emerald-50/30 border border-emerald-200 p-8 my-8 flex flex-col items-center justify-center text-center rounded-lg"
         };
       case 'modern':
       default:
@@ -80,13 +101,20 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onBack, theme, o
           h1: "text-3xl font-bold text-brand-900 border-b-2 border-brand-100 pb-2 mb-6",
           h2: "text-2xl font-semibold text-brand-700 mt-8 mb-4 flex items-center",
           h3: "text-lg font-semibold text-brand-600 mt-6 mb-2",
+          // Table styles - Modern
+          tableContainer: "my-6 w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm",
+          table: "min-w-full divide-y divide-gray-200",
           tableHeader: "bg-brand-600 text-white",
-          tableRowEven: "bg-brand-50",
-          tableBorder: "border border-gray-200 overflow-hidden rounded-lg",
+          tableTh: "px-4 py-3 text-left font-semibold",
+          tableBody: "bg-white divide-y divide-gray-200",
+          tableRowEven: "bg-brand-50/30",
+          tableTd: "px-4 py-3 text-sm text-gray-700",
+
           blockquote: "border-l-4 border-brand-400 bg-blue-50 text-brand-900 p-4 my-4 rounded-r-lg",
           code: "bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded border border-gray-200 font-mono text-sm font-bold shadow-sm",
           strong: "text-brand-800 font-bold",
-          link: "text-brand-600 hover:underline"
+          link: "text-brand-600 hover:underline",
+          imagePlaceholder: "bg-gray-50 border-2 border-dashed border-gray-300 p-8 my-6 flex flex-col items-center justify-center text-center rounded-lg hover:border-brand-400 transition-colors"
         };
     }
   };
@@ -156,20 +184,40 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onBack, theme, o
                 h1: ({node, ...props}) => <h1 className={themeClasses.h1} {...props} />,
                 h2: ({node, ...props}) => <h2 className={themeClasses.h2} {...props} />,
                 h3: ({node, ...props}) => <h3 className={themeClasses.h3} {...props} />,
+                // Enhanced Table Rendering
                 table: ({node, ...props}) => (
-                  <div className={`my-8 w-full overflow-hidden ${themeClasses.tableBorder}`}>
-                    <table className="min-w-full divide-y divide-gray-300" {...props} />
+                  <div className={themeClasses.tableContainer}>
+                    <table className={themeClasses.table} {...props} />
                   </div>
                 ),
                 thead: ({node, ...props}) => <thead className={themeClasses.tableHeader} {...props} />,
+                tbody: ({node, ...props}) => <tbody className={themeClasses.tableBody} {...props} />,
                 tr: ({node, ...props}) => <tr className={`even:${themeClasses.tableRowEven}`} {...props} />,
-                th: ({node, ...props}) => <th className="px-4 py-3 text-left font-semibold tracking-wider" {...props} />,
-                td: ({node, ...props}) => <td className="px-4 py-2 text-sm text-gray-700 border-t border-gray-100" {...props} />,
-                blockquote: ({node, ...props}) => <blockquote className={themeClasses.blockquote} {...props} />,
+                th: ({node, ...props}) => <th className={themeClasses.tableTh} {...props} />,
+                td: ({node, ...props}) => <td className={themeClasses.tableTd} {...props} />,
+                
+                // Custom Blockquote and Image Placeholder logic
+                blockquote: ({node, children, ...props}) => {
+                  // Check if this blockquote is actually an image placeholder
+                  // React-markdown passes children as arrays. We need to check content.
+                  const content = String(children);
+                  const isImagePlaceholder = content.includes('[FOTO:');
+                  
+                  if (isImagePlaceholder) {
+                    return (
+                      <div className={`${themeClasses.imagePlaceholder} print:border-solid`}>
+                        <ImageIcon className="w-8 h-8 opacity-40 mb-2" />
+                        <span className="font-bold opacity-70 block mb-1">Miesto pre obrázok</span>
+                        <div className="text-sm opacity-60 italic">{children}</div>
+                      </div>
+                    );
+                  }
+                  
+                  return <blockquote className={themeClasses.blockquote} {...props}>{children}</blockquote>;
+                },
                 code: ({node, ...props}) => <code className={themeClasses.code} {...props} />,
                 strong: ({node, ...props}) => <strong className={themeClasses.strong} {...props} />,
                 a: ({node, ...props}) => <a className={themeClasses.link} {...props} />,
-                // Custom HR for section breaks
                 hr: ({node, ...props}) => <div className="page-break-before-always my-8 border-t-2 border-dashed border-gray-300 print:border-none" />
               }}
             >
