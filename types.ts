@@ -14,6 +14,8 @@ export interface GenerationState {
   status: 'idle' | 'uploading' | 'processing' | 'completed' | 'error';
   message?: string;
   progress?: number;
+  totalFiles?: number;
+  currentFile?: number;
 }
 
 export interface GeneratedManual {

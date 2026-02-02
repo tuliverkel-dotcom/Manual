@@ -25,10 +25,7 @@ export const generateManualFromPDF = async (
   file: File,
   config: ManualConfig
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please set the API_KEY environment variable.");
-  }
-
+  // Use process.env.API_KEY directly as per guidelines
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   // Prepare the file part
@@ -40,7 +37,7 @@ export const generateManualFromPDF = async (
     .join('\n');
 
   const prompt = `
-    You are an expert technical writer and translator. Your task is to transform the attached PDF manual into a new, professional technical document.
+    You are an expert technical writer and translator. Your task is to transform the attached PDF document (which is part of a larger manual) into a professional technical document section.
 
     **CONFIGURATION:**
     - Target Language: ${config.targetLanguage} (Translate everything to this language).
@@ -52,23 +49,22 @@ export const generateManualFromPDF = async (
 
     **INSTRUCTIONS:**
     1. **Analyze:** Read the PDF content carefully.
-    2. **Restructure:** Reorganize the content logically. Group related sections together. If the flow is confusing, improve it.
+    2. **Restructure:** Reorganize the content logically. Group related sections together.
     3. **Format:** Output the result in clean, structured Markdown.
-       - Use H1 for the main title.
-       - Use H2 and H3 for sections.
+       - Use H1, H2, H3 for sections (maintain hierarchy).
        - Use bullet points for lists.
        - Use > blockquotes for warnings, notes, or tips.
        - Use **bold** for key terms or UI elements.
-       - Use tables where appropriate for technical data.
-    4. **Refine:** Remove any references to the old company name or product codes if they were in the replacement list. Ensure the new manual reads as if it was originally written for the new brand.
-    5. **Visuals:** Since you cannot output images, where an image existed in the original, insert a placeholder like: *[Image: Description of what should be here]* so the user knows to add it later.
+       - Use tables where appropriate.
+    4. **Refine:** Remove any references to the old company name or product codes if they were in the replacement list.
+    5. **Visuals:** Insert a placeholder like: *[Obrázok: Description]* where images should be.
 
     **OUTPUT:**
-    Return ONLY the Markdown string. Do not include prologue or epilogue text.
+    Return ONLY the Markdown string. Do not include prologue (like "Here is the translation") or epilogue. Start directly with the content.
   `;
 
-  // Use a model with a large context window capable of handling PDFs
-  const modelId = 'gemini-2.5-flash-latest';
+  // Use a model recommended for basic text tasks
+  const modelId = 'gemini-3-flash-preview';
 
   try {
     const response = await ai.models.generateContent({
@@ -81,9 +77,9 @@ export const generateManualFromPDF = async (
       }
     });
 
-    return response.text || "No content generated.";
+    return response.text || "";
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error(error.message || "Failed to generate manual.");
+    throw new Error(error.message || "Nepodarilo sa vygenerovať manuál.");
   }
 };

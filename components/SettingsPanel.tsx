@@ -36,7 +36,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ config, setConfig, disabl
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full flex flex-col">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full flex flex-col overflow-y-auto">
       <div className="flex items-center gap-2 mb-6 text-gray-800">
         <Settings className="w-5 h-5" />
         <h2 className="font-semibold text-lg">Konfigurácia</h2>

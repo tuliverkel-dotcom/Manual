@@ -24,13 +24,41 @@ const App: React.FC = () => {
 
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
 
-  const handleFileUpload = async (file: File) => {
-    setGenerationState({ status: 'processing', progress: 0 });
+  const handleFileUpload = async (files: File[]) => {
+    setGenerationState({ 
+      status: 'processing', 
+      progress: 0,
+      totalFiles: files.length,
+      currentFile: 1 
+    });
 
     try {
-      const markdown = await generateManualFromPDF(file, config);
-      setGeneratedContent(markdown);
+      // Sort files by name to ensure correct order if numbered (chapter1, chapter2...)
+      const sortedFiles = files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      
+      let finalMarkdown = "";
+
+      for (let i = 0; i < sortedFiles.length; i++) {
+        const file = sortedFiles[i];
+        
+        // Update state
+        setGenerationState(prev => ({
+          ...prev,
+          status: 'processing',
+          currentFile: i + 1,
+          progress: Math.round(((i) / sortedFiles.length) * 100)
+        }));
+
+        // Generate content for this chunk
+        const chunkContent = await generateManualFromPDF(file, config);
+        
+        // Append to final content with a separator
+        finalMarkdown += chunkContent + "\n\n<div style='page-break-before: always;'></div>\n\n";
+      }
+
+      setGeneratedContent(finalMarkdown);
       setGenerationState({ status: 'completed' });
+
     } catch (error: any) {
       setGenerationState({ 
         status: 'error', 
@@ -68,7 +96,7 @@ const App: React.FC = () => {
             </h1>
           </div>
           <div className="text-sm text-gray-500 hidden sm:block">
-            Verzia 1.0 • Powered by Gemini AI
+            Verzia 1.1 • Multi-PDF Support
           </div>
         </div>
       </header>
@@ -78,7 +106,7 @@ const App: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-8 h-[calc(100vh-8rem)]">
           
           {/* Left Column: Settings */}
-          <div className="w-full lg:w-1/3 xl:w-1/4 min-h-[400px]">
+          <div className="w-full lg:w-1/3 xl:w-1/4 h-full min-h-[500px]">
             <SettingsPanel 
               config={config} 
               setConfig={setConfig} 
@@ -94,8 +122,8 @@ const App: React.FC = () => {
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Generátor Profesionálnej Dokumentácie</h2>
               <p className="text-gray-600 leading-relaxed">
                 Tento nástroj automaticky preloží, preformátuje a upraví vaše technické PDF manuály.
-                Využíva umelú inteligenciu na reštrukturalizáciu obsahu a aplikáciu firemných štandardov 
-                (napr. zmena <em>intec</em> na <em>elift</em>).
+                <br />
+                Pre veľké manuály (nad 20 strán) ich prosím rozdeľte a <strong>nahrajte viacero súborov naraz</strong>.
               </p>
             </div>
 
@@ -112,7 +140,7 @@ const App: React.FC = () => {
                   <div className="bg-green-100 p-1 rounded text-green-600 mt-0.5">
                     <FileText className="w-3 h-3" />
                   </div>
-                  <span>Automatický preklad do Slovenčiny</span>
+                  <span>Viac súborov = 1 Manuál</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="bg-blue-100 p-1 rounded text-blue-600 mt-0.5">
