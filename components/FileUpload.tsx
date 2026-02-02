@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { UploadCloud, FileText, Loader2, AlertCircle, Layers } from 'lucide-react';
+import { UploadCloud, Loader2, AlertCircle, Layers, Scissors } from 'lucide-react';
 import { GenerationState } from '../types';
 
 interface FileUploadProps {
@@ -11,7 +11,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, state }) => {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (state.status === 'processing') return;
+    if (state.status === 'processing' || state.status === 'analyzing') return;
     
     const fileList = e.dataTransfer.files;
     if (fileList && fileList.length > 0) {
@@ -35,28 +35,41 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, state }) => {
     }
   };
 
+  const isBusy = state.status === 'processing' || state.status === 'analyzing';
+
   return (
     <div 
       className={`
         w-full h-64 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-6 transition-colors
-        ${state.status === 'processing' ? 'bg-gray-50 border-gray-300 cursor-not-allowed' : 'bg-white border-brand-300 hover:border-brand-500 cursor-pointer hover:bg-brand-50'}
+        ${isBusy ? 'bg-gray-50 border-gray-300 cursor-not-allowed' : 'bg-white border-brand-300 hover:border-brand-500 cursor-pointer hover:bg-brand-50'}
       `}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
-      {state.status === 'processing' ? (
+      {isBusy ? (
         <div className="flex flex-col items-center animate-pulse">
-          <Loader2 className="w-12 h-12 text-brand-600 animate-spin mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700">Spracovávam súbory...</h3>
+          {state.status === 'analyzing' ? (
+             <Scissors className="w-12 h-12 text-brand-600 animate-bounce mb-4" />
+          ) : (
+             <Loader2 className="w-12 h-12 text-brand-600 animate-spin mb-4" />
+          )}
+         
+          <h3 className="text-lg font-semibold text-gray-700">
+            {state.status === 'analyzing' ? 'Analyzujem a delím PDF...' : 'Spracovávam obsah...'}
+          </h3>
+          
           <p className="text-sm text-gray-500 mt-2">
-            Súbor {state.currentFile} z {state.totalFiles}
+            {state.message || `Súbor ${state.currentFile} z ${state.totalFiles}`}
           </p>
-          <div className="w-48 bg-gray-200 rounded-full h-2.5 mt-4">
-            <div 
-              className="bg-brand-600 h-2.5 rounded-full transition-all duration-300" 
-              style={{ width: `${state.progress}%` }}
-            ></div>
-          </div>
+          
+          {state.progress !== undefined && (
+            <div className="w-48 bg-gray-200 rounded-full h-2.5 mt-4">
+              <div 
+                className="bg-brand-600 h-2.5 rounded-full transition-all duration-300" 
+                style={{ width: `${state.progress}%` }}
+              ></div>
+            </div>
+          )}
         </div>
       ) : state.status === 'error' ? (
         <div className="flex flex-col items-center">
@@ -74,21 +87,21 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, state }) => {
             <UploadCloud className="w-8 h-8 text-brand-600" />
             <Layers className="w-4 h-4 text-brand-500 absolute bottom-3 right-3 bg-white rounded-full border border-white" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-800">Nahrajte PDF manuál(y)</h3>
+          <h3 className="text-lg font-semibold text-gray-800">Nahrajte PDF manuál</h3>
           <p className="text-sm text-gray-500 mt-1 mb-6">
-            Presuňte jeden alebo viacero súborov sem.
+            Podporujem aj veľké 200+ stranové manuály.
             <br />
-            <span className="text-xs opacity-75">(Ideálne pre rozdelené kapitoly veľkého manuálu)</span>
+            <span className="text-xs opacity-75">(Automaticky ich rozdelím a spracujem)</span>
           </p>
           <label className="bg-brand-600 text-white px-6 py-2 rounded-md font-medium cursor-pointer hover:bg-brand-700 transition-shadow shadow-sm">
-            Vybrať súbory
+            Vybrať súbor
             <input 
               type="file" 
               accept="application/pdf" 
               multiple
               className="hidden" 
               onChange={handleFileInput}
-              disabled={state.status === 'processing'}
+              disabled={isBusy}
             />
           </label>
         </>

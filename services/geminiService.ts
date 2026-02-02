@@ -25,8 +25,14 @@ export const generateManualFromPDF = async (
   file: File,
   config: ManualConfig
 ): Promise<string> => {
-  // Use process.env.API_KEY directly as per guidelines
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Use provided key or fallback to env var
+  const apiKey = config.apiKey || process.env.API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("API Key nie je nastavený. Prosím vložte ho v nastaveniach.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   // Prepare the file part
   const pdfPart = await fileToGenerativePart(file);

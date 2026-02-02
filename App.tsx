@@ -4,13 +4,15 @@ import FileUpload from './components/FileUpload';
 import ManualPreview from './components/ManualPreview';
 import { ManualConfig, GenerationState } from './types';
 import { generateManualFromPDF } from './services/geminiService';
-import { FileText, Sparkles } from 'lucide-react';
+import { splitPdf } from './services/pdfHelpers';
+import { FileText, Sparkles, Scissors } from 'lucide-react';
 
 const App: React.FC = () => {
   // Initial Configuration State
   const [config, setConfig] = useState<ManualConfig>({
     targetLanguage: 'Slovak',
     tone: 'professional',
+    theme: 'modern', // Default theme
     replacements: [
       { id: '1', original: 'intec', replacement: 'elift' },
       { id: '2', original: 'mlc800', replacement: 'eliftecV2' },
@@ -24,29 +26,47 @@ const App: React.FC = () => {
 
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
 
-  const handleFileUpload = async (files: File[]) => {
+  const handleFileUpload = async (inputFiles: File[]) => {
     setGenerationState({ 
-      status: 'processing', 
-      progress: 0,
-      totalFiles: files.length,
-      currentFile: 1 
+      status: 'analyzing', 
+      message: 'Analyzujem štruktúru PDF...' 
     });
 
     try {
-      // Sort files by name to ensure correct order if numbered (chapter1, chapter2...)
-      const sortedFiles = files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-      
+      let filesToProcess: File[] = [];
+
+      // Logic: If user uploads 1 file, try to split it. If multiple, assume they are already split.
+      if (inputFiles.length === 1) {
+        setGenerationState({ 
+          status: 'analyzing', 
+          message: 'Automaticky delím veľký manuál na menšie časti (cca 10 strán)...' 
+        });
+        // Split into 10-page chunks to be safe for Output Token Limits
+        filesToProcess = await splitPdf(inputFiles[0], 10);
+      } else {
+        // Sort files by name to ensure correct order
+        filesToProcess = inputFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      }
+
+      setGenerationState({ 
+        status: 'processing', 
+        progress: 0,
+        totalFiles: filesToProcess.length,
+        currentFile: 1 
+      });
+
       let finalMarkdown = "";
 
-      for (let i = 0; i < sortedFiles.length; i++) {
-        const file = sortedFiles[i];
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const file = filesToProcess[i];
         
         // Update state
         setGenerationState(prev => ({
           ...prev,
           status: 'processing',
           currentFile: i + 1,
-          progress: Math.round(((i) / sortedFiles.length) * 100)
+          progress: Math.round(((i) / filesToProcess.length) * 100),
+          message: `Spracovávam časť ${i + 1} z ${filesToProcess.length}...`
         }));
 
         // Generate content for this chunk
@@ -60,6 +80,7 @@ const App: React.FC = () => {
       setGenerationState({ status: 'completed' });
 
     } catch (error: any) {
+      console.error(error);
       setGenerationState({ 
         status: 'error', 
         message: error.message || 'Nepodarilo sa spracovať súbor.' 
@@ -78,6 +99,8 @@ const App: React.FC = () => {
       <ManualPreview 
         content={generatedContent} 
         onBack={reset} 
+        theme={config.theme}
+        onThemeChange={(newTheme) => setConfig({ ...config, theme: newTheme })}
       />
     );
   }
@@ -96,7 +119,7 @@ const App: React.FC = () => {
             </h1>
           </div>
           <div className="text-sm text-gray-500 hidden sm:block">
-            Verzia 1.1 • Multi-PDF Support
+            Verzia 1.3 • Theming & Styling
           </div>
         </div>
       </header>
@@ -110,7 +133,7 @@ const App: React.FC = () => {
             <SettingsPanel 
               config={config} 
               setConfig={setConfig} 
-              disabled={generationState.status === 'processing'}
+              disabled={generationState.status === 'processing' || generationState.status === 'analyzing'}
             />
           </div>
 
@@ -121,9 +144,8 @@ const App: React.FC = () => {
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Generátor Profesionálnej Dokumentácie</h2>
               <p className="text-gray-600 leading-relaxed">
-                Tento nástroj automaticky preloží, preformátuje a upraví vaše technické PDF manuály.
-                <br />
-                Pre veľké manuály (nad 20 strán) ich prosím rozdeľte a <strong>nahrajte viacero súborov naraz</strong>.
+                Nahrajte celý PDF manuál. Aplikácia ho spracuje a umožní vám vybrať si 
+                <strong> vizuálny štýl</strong> (Moderný, Technický, Elegantný).
               </p>
             </div>
 
@@ -138,27 +160,27 @@ const App: React.FC = () => {
               <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-500">
                 <div className="flex items-start gap-2">
                   <div className="bg-green-100 p-1 rounded text-green-600 mt-0.5">
-                    <FileText className="w-3 h-3" />
+                    <Scissors className="w-3 h-3" />
                   </div>
-                  <span>Viac súborov = 1 Manuál</span>
+                  <span>Auto-Split: Rozdelí veľké PDF</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="bg-blue-100 p-1 rounded text-blue-600 mt-0.5">
-                    <FileText className="w-3 h-3" />
+                    <Sparkles className="w-3 h-3" />
                   </div>
-                  <span>Inteligentné preskupenie sekcií</span>
+                  <span>Vizuálne témy (Farby, Štýly)</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="bg-purple-100 p-1 rounded text-purple-600 mt-0.5">
                     <FileText className="w-3 h-3" />
                   </div>
-                  <span>Výmena kľúčových slov (Rebranding)</span>
+                  <span>Rebranding (Zmena názvov)</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="bg-orange-100 p-1 rounded text-orange-600 mt-0.5">
                     <FileText className="w-3 h-3" />
                   </div>
-                  <span>Formát pripravený na tlač</span>
+                  <span>Tlač do farebného PDF</span>
                 </div>
               </div>
             </div>

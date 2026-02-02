@@ -4,14 +4,18 @@ export interface ReplacementRule {
   replacement: string;
 }
 
+export type ManualTheme = 'modern' | 'industrial' | 'elegant' | 'swiss';
+
 export interface ManualConfig {
+  apiKey?: string;
   targetLanguage: string;
   tone: 'professional' | 'technical' | 'simplified';
+  theme: ManualTheme;
   replacements: ReplacementRule[];
 }
 
 export interface GenerationState {
-  status: 'idle' | 'uploading' | 'processing' | 'completed' | 'error';
+  status: 'idle' | 'analyzing' | 'uploading' | 'processing' | 'completed' | 'error';
   message?: string;
   progress?: number;
   totalFiles?: number;
