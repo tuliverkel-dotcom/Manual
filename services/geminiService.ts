@@ -53,43 +53,43 @@ export const generateManualFromPDF = async (
     - Target Language: ${config.targetLanguage} (Translate everything).
     - Tone: ${config.tone}.
     
-    **1. BRANDING & REPLACEMENTS (VERY IMPORTANT):**
+    **1. BRANDING & REPLACEMENTS:**
     ${replacementInstructions}
     - **HEADER:** Start the document section with a single line: "**Manufacturer: ${mainBrand}**".
-    - **BODY:** Do NOT mention the *original* manufacturer's name, address, or support email in the body text. Use neutral terms like "the device", "the unit", or the new brand name.
+    - **BODY:** Do NOT mention the *original* manufacturer's name in the body text.
 
     **2. CONTENT FILTRATION:**
-    - **DELETE** legal disclaimers, FCC warnings, "Declaration of Conformity".
-    - **DELETE** addresses/phones in footers.
-    - **KEEP** technical instructions, safety warnings, specifications.
+    - DELETE legal disclaimers, FCC warnings.
+    - KEEP technical instructions, safety warnings, specifications.
 
-    **3. VISUALS STRATEGY:**
-    - **PINOUTS / WIRING:** Convert diagrams to Markdown Tables or Bullet Lists.
-    - **PHOTOS:** Use \`> **[FOTO: Detailed description]**\` only for complex photos.
-
-    **4. KEYBOARD COMMAND TABLES (CRITICAL):**
-    - **FORMAT:** You MUST convert lists of keypad commands into a MARKDOWN TABLE.
-    - **COLUMNS:** Use exactly these 3 columns:
+    **3. INTELLIGENT TABLE STRUCTURE (CRITICAL):**
+    
+    **Type A: KEYPAD COMMANDS (Simple Lists)**
+    - IF the table lists simple button combinations (e.g., "0 1 ENTER" -> "Action"), use this EXACT 3-column structure:
       | Príkaz | Popis | Poznámka |
       | :--- | :--- | :--- |
-    - **COMMAND SYNTAX:** You MUST separate every key with a space so they can be styled as buttons.
-      - **WRONG:** \`100↵\`
-      - **CORRECT:** \`1 0 0 ↵\`
-      - **CORRECT:** \`0 2 x x ↵\`
-    - **ENTER KEY:** Use the symbol '↵' for Enter.
-    - **VARIABLES:** If the code uses placeholders like 'x' or 'y' (e.g. for floor number), keep them as 'x' or 'y'.
+    - **Separate keys with spaces** (e.g., "1 0 0", "0 2 x x").
+    - Use '↵' for Enter.
 
-    **5. FORMATTING RULES:**
-    - **TABLES:** All technical data MUST be Markdown Tables.
+    **Type B: MENU STRUCTURES (Hierarchical Trees - The Problem Area)**
+    - IF the table shows a Menu Tree (e.g., "1. Menu level", "2. Menu level"...), **DO NOT squash it into 3 columns.**
+    - **REPLICATE THE COLUMNS EXACTLY.** If the PDF has 5 columns (Level 1, Level 2, Level 3, Level 4, Description), you MUST create a 5-column Markdown table.
+    - **Structure:**
+      | Úroveň 1 | Úroveň 2 | Úroveň 3 | Úroveň 4 | Popis |
+      | :--- | :--- | :--- | :--- | :--- |
+    - **IMPORTANT:** Keep parent cells EMPTY if they are empty in the PDF. Do not merge text across rows inappropriately. The visual hierarchy relies on empty cells.
+
+    **Type C: PINOUTS / WIRING**
+    - Convert distinct tables to Markdown Tables.
+
+    **4. FORMATTING RULES:**
     - **HEADINGS:** Use H1 (#) for Main Title, H2 (##) for Chapters.
-    - **STYLE:** Use bolding for key terms (e.g., **24V DC**).
+    - **VISUALS:** Use \`> **[FOTO: Detailed description]**\` only for complex photos.
     
     **PROCESS:**
-    1. Read PDF.
-    2. Filter junk.
-    3. Apply replacements.
-    4. **RECREATE TABLES:** Detect command lists and build the 3-column table described above.
-    5. Translate to ${config.targetLanguage}.
+    1. Analyze the table type (Keypad Command vs. Menu Structure).
+    2. Choose the correct column layout (3 columns vs. Multi-column).
+    3. Translate and Format.
 
     **OUTPUT:**
     Return ONLY the Markdown string. No chat interaction.

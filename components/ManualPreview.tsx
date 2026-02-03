@@ -32,23 +32,18 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
   };
 
   const handleSaveProject = () => {
-    // Current config needs to reflect the active theme
     const currentConfig = { ...config, theme };
-    
     const projectData: SavedProject = {
       version: "1.0",
       timestamp: Date.now(),
       config: currentConfig,
       content: content
     };
-
     const jsonString = JSON.stringify(projectData, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
     a.href = url;
-    // .elift extension makes it feel more like a dedicated file, but it's just JSON
     a.download = `projekt_elift_${new Date().toISOString().slice(0,10)}.elift`;
     document.body.appendChild(a);
     a.click();
@@ -67,33 +62,22 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
     reader.readAsDataURL(file);
   };
 
-  // Handle Ctrl+V (Paste) in Textarea
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData.items;
-    let foundImage = false;
-
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
-        e.preventDefault(); // Stop default text pasting if it's an image
-        foundImage = true;
-        
+        e.preventDefault();
         const blob = items[i].getAsFile();
         if (blob) {
           const reader = new FileReader();
           reader.onload = (event) => {
             const base64 = event.target?.result as string;
             const imageMarkdown = `\n![Vložený obrázok](${base64})\n`;
-            
-            // Insert at cursor position
             const textarea = e.currentTarget;
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
             const currentText = content;
-            
-            const before = currentText.substring(0, start);
-            const after = currentText.substring(end);
-            
-            const newContent = before + imageMarkdown + after;
+            const newContent = currentText.substring(0, start) + imageMarkdown + currentText.substring(end);
             onContentChange(newContent);
           };
           reader.readAsDataURL(blob);
@@ -102,73 +86,28 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
     }
   };
 
-  // Helper to detect if a string looks like a command sequence
   const isCommandContent = (text: string) => {
     const trimmed = text.trim();
-    // 1. Contains ENTER symbol explicitly
     if (trimmed.includes('↵') || trimmed.includes('ENTER')) return true;
-    
-    // 2. Is a short sequence of digits/chars (e.g. "1 0 0" or "0 2 x x")
     if (trimmed.length < 50 && /^[\d\sxyXY]+(↵|ENTER)?$/.test(trimmed)) return true;
-
     return false;
   };
 
-  // Custom renderer for Command Cells - LINEAR / BUTTON STYLE
   const CommandCell = ({ children, themeClasses }: { children: React.ReactNode, themeClasses: any }) => {
     const text = String(children);
-    
-    // Split text into parts. 
     const parts = text.split(/(\s+|↵|ENTER|Enter)/).filter(p => p.trim() !== '');
-
     return (
       <div className="flex flex-row flex-wrap items-center gap-1.5 align-middle">
         {parts.map((part, index) => {
           const isEnter = ['↵', 'ENTER', 'Enter'].includes(part);
           const isVar = ['x', 'y', 'X', 'Y'].includes(part);
-          
-          // ENTER KEY Styling
           if (isEnter) {
-            return (
-               <span key={index} className={`
-                 inline-flex items-center justify-center 
-                 h-7 px-2.5 
-                 text-[11px] font-black uppercase tracking-wider
-                 rounded shadow-sm ml-1 border
-                 ${themeClasses.enterKey}
-               `}>
-                 ENTER ↵
-               </span>
-            );
+            return <span key={index} className={`inline-flex items-center justify-center h-7 px-2.5 text-[11px] font-black uppercase tracking-wider rounded shadow-sm ml-1 border ${themeClasses.enterKey}`}>ENTER ↵</span>;
           }
-          
-          // VARIABLE (x, y) Styling
           if (isVar) {
-             return (
-               <span key={index} className="
-                 inline-flex items-center justify-center 
-                 w-7 h-7 
-                 text-sm italic font-serif text-gray-500 
-                 bg-gray-100 border border-gray-300 rounded
-               ">
-                 {part}
-               </span>
-             );
+             return <span key={index} className="inline-flex items-center justify-center w-7 h-7 text-sm italic font-serif text-gray-500 bg-gray-100 border border-gray-300 rounded">{part}</span>;
           }
-
-          // STANDARD DIGIT KEY Styling
-          return (
-            <span key={index} className={`
-              inline-flex items-center justify-center 
-              w-7 h-7 
-              text-sm font-bold 
-              border-b-[3px] active:border-b-0 active:translate-y-[3px] transition-all
-              rounded
-              ${themeClasses.keycap}
-            `}>
-              {part}
-            </span>
-          );
+          return <span key={index} className={`inline-flex items-center justify-center w-7 h-7 text-sm font-bold border-b-[3px] active:border-b-0 active:translate-y-[3px] transition-all rounded ${themeClasses.keycap}`}>{part}</span>;
         })}
       </div>
     );
@@ -183,13 +122,12 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           h2: "text-2xl font-bold text-gray-900 mt-12 mb-6 flex items-center gap-4 before:content-[''] before:block before:w-6 before:h-6 before:bg-[#dc2626]",
           h3: "text-lg font-bold text-[#dc2626] mt-8 mb-4 uppercase tracking-widest border-b border-gray-200 pb-1",
           tableContainer: "my-8 w-full border-t-4 border-[#dc2626] overflow-x-auto bg-white shadow-sm",
-          table: "min-w-full divide-y divide-gray-200 table-auto",
-          tableHeader: "bg-white text-[#dc2626] font-black text-xs uppercase tracking-widest",
-          tableTh: "px-6 py-4 text-left align-bottom",
-          tableBody: "bg-white divide-y divide-gray-100",
+          table: "min-w-full divide-y divide-gray-200 table-auto border-collapse",
+          tableHeader: "bg-white text-[#dc2626] font-black text-xs uppercase tracking-widest border-b-2 border-[#dc2626]",
+          tableTh: "px-4 py-3 text-left align-bottom border border-gray-200", // Added explicit border
+          tableBody: "bg-white",
           tableRowEven: "bg-gray-50",
-          tableTd: "px-6 py-4 text-sm text-gray-900 font-medium align-middle leading-relaxed",
-          // Swiss Keycaps: Clean white with red accents
+          tableTd: "px-4 py-3 text-sm text-gray-900 font-medium align-middle leading-relaxed border border-gray-200", // Added explicit border
           keycap: "bg-white border-gray-300 text-gray-800 shadow-sm",
           enterKey: "bg-[#dc2626] text-white border-[#b91c1c]",
           blockquote: "border-l-[6px] border-[#dc2626] bg-gray-50 text-gray-900 p-6 my-8 font-medium italic shadow-sm",
@@ -205,13 +143,12 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           h2: "text-2xl font-bold text-gray-900 border-l-[12px] border-orange-600 pl-4 uppercase tracking-wide mt-10 mb-6 bg-gray-200 py-2",
           h3: "text-lg font-bold text-gray-800 mt-8 mb-4 underline decoration-orange-600 decoration-4 underline-offset-4",
           tableContainer: "my-10 w-full bg-[#1a1a1a] border-4 border-gray-800 rounded-lg shadow-xl overflow-hidden overflow-x-auto",
-          table: "min-w-full divide-y divide-gray-700 table-auto text-gray-300 font-mono",
+          table: "min-w-full divide-y divide-gray-700 table-auto text-gray-300 font-mono border-collapse",
           tableHeader: "bg-gray-900 text-orange-500 uppercase text-xs tracking-widest border-b border-gray-700",
-          tableTh: "px-5 py-3 text-left border-r border-gray-800 last:border-r-0 align-top",
+          tableTh: "px-5 py-3 text-left border border-gray-700 align-top",
           tableBody: "divide-y divide-gray-800",
           tableRowEven: "bg-[#222222]",
-          tableTd: "px-5 py-4 text-sm border-r border-gray-800 last:border-r-0 align-middle leading-relaxed",
-          // Industrial Keycaps: Dark terminal style
+          tableTd: "px-5 py-4 text-sm border border-gray-700 align-middle leading-relaxed",
           keycap: "bg-[#333] border-gray-600 text-green-400 font-mono border-2",
           enterKey: "bg-orange-600 text-white border-orange-700",
           blockquote: "border-l-4 border-orange-600 bg-gray-200 text-gray-900 p-4 my-4 font-bold italic shadow-sm border-t border-b border-gray-300",
@@ -220,20 +157,19 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           link: "text-orange-700 underline hover:text-orange-900",
           imagePlaceholder: "bg-gray-200 border-4 border-gray-400 p-6 my-6 flex flex-col items-center justify-center text-center hover:bg-orange-100 cursor-pointer group"
         };
-      case 'construction': // Yellow / Black
+      case 'construction':
         return {
           wrapper: "font-sans",
           h1: "text-4xl font-black text-black border-b-[8px] border-yellow-400 pb-2 mb-8 uppercase tracking-tighter",
           h2: "text-2xl font-bold bg-black text-yellow-400 px-6 py-3 mt-12 mb-6 inline-block uppercase transform -skew-x-6 shadow-[8px_8px_0px_0px_rgba(250,204,21,1)]",
           h3: "text-lg font-bold text-black mt-8 mb-4 border-l-[10px] border-yellow-400 pl-3 uppercase",
           tableContainer: "my-8 w-full border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-x-auto bg-white",
-          table: "min-w-full divide-y-2 divide-black table-auto",
+          table: "min-w-full divide-y-2 divide-black table-auto border-collapse",
           tableHeader: "bg-yellow-400 text-black font-black uppercase text-sm border-b-4 border-black",
-          tableTh: "px-4 py-3 text-left border-r-4 border-black last:border-r-0 align-top",
+          tableTh: "px-4 py-3 text-left border-2 border-black align-top",
           tableBody: "bg-white divide-y-2 divide-black",
           tableRowEven: "bg-yellow-50",
-          tableTd: "px-4 py-4 text-sm text-black font-bold border-r-2 border-black last:border-r-0 align-middle leading-relaxed",
-          // Construction Keycaps: High contrast black/yellow
+          tableTd: "px-4 py-4 text-sm text-black font-bold border-2 border-black align-middle leading-relaxed",
           keycap: "bg-black border-black text-yellow-400 font-black rounded-none shadow-[2px_2px_0px_0px_rgba(250,204,21,1)] border-b-0",
           enterKey: "bg-yellow-400 text-black border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border",
           blockquote: "bg-yellow-100 border-4 border-black p-6 my-6 font-bold text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
@@ -249,13 +185,12 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           h2: "text-2xl font-normal text-emerald-800 mt-10 mb-6 flex items-center gap-2",
           h3: "text-xl font-medium text-emerald-700 mt-8 mb-4 italic",
           tableContainer: "my-8 w-full border border-emerald-100 rounded-xl overflow-hidden shadow-lg overflow-x-auto",
-          table: "min-w-full divide-y divide-emerald-100 table-auto",
-          tableHeader: "bg-emerald-50 text-emerald-900 font-medium tracking-wide",
-          tableTh: "px-8 py-5 text-left align-top",
+          table: "min-w-full divide-y divide-emerald-100 table-auto border-collapse",
+          tableHeader: "bg-emerald-50 text-emerald-900 font-medium tracking-wide border-b border-emerald-200",
+          tableTh: "px-6 py-5 text-left align-top border border-emerald-100",
           tableBody: "bg-white divide-y divide-emerald-50",
           tableRowEven: "bg-[#fafcfb]",
-          tableTd: "px-8 py-4 text-sm text-emerald-800 align-middle leading-relaxed",
-          // Elegant Keycaps: Soft, rounded, subtle
+          tableTd: "px-6 py-4 text-sm text-emerald-800 align-middle leading-relaxed border border-emerald-100",
           keycap: "bg-white border-emerald-200 text-emerald-800 rounded-md shadow-sm font-sans",
           enterKey: "bg-emerald-100 text-emerald-900 border-emerald-300",
           blockquote: "border-l-2 border-emerald-300 bg-emerald-50/50 text-emerald-800 p-6 my-6 italic text-lg relative",
@@ -272,13 +207,12 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           h2: "text-2xl font-semibold text-brand-700 mt-10 mb-6 flex items-center",
           h3: "text-lg font-semibold text-brand-600 mt-8 mb-4",
           tableContainer: "my-8 w-full border border-gray-200 rounded-lg overflow-hidden shadow-md overflow-x-auto ring-1 ring-gray-100",
-          table: "min-w-full divide-y divide-gray-200 table-auto",
+          table: "min-w-full divide-y divide-gray-200 table-auto border-collapse",
           tableHeader: "bg-gray-50 text-brand-900",
-          tableTh: "px-6 py-4 text-left font-bold align-top tracking-wide text-xs uppercase text-gray-500",
+          tableTh: "px-4 py-3 text-left font-bold align-top tracking-wide text-xs uppercase text-gray-500 border border-gray-200", // Full border
           tableBody: "bg-white divide-y divide-gray-100",
           tableRowEven: "bg-blue-50/20",
-          tableTd: "px-6 py-4 text-sm text-gray-700 align-middle leading-relaxed",
-          // Modern Keycaps: Clean, SaaS style buttons
+          tableTd: "px-4 py-3 text-sm text-gray-700 align-middle leading-relaxed border border-gray-200", // Full border
           keycap: "bg-white border-gray-200 text-gray-700 shadow-sm rounded border-b-2",
           enterKey: "bg-brand-50 border-brand-200 text-brand-600 font-bold",
           blockquote: "border-l-4 border-brand-400 bg-blue-50 text-brand-900 p-4 my-4 rounded-r-lg",
@@ -421,13 +355,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                   tr: ({node, ...props}) => <tr className={`even:${themeClasses.tableRowEven}`} {...props} />,
                   th: ({node, ...props}) => <th className={themeClasses.tableTh} {...props} />,
                   td: ({node, ...props}) => {
-                    // Check if this is the first column (Command column)
-                    // Unfortunately, react-markdown doesn't give us column index easily in props.
-                    // We can infer it if it's the first child of the TR, but React nodes are complex.
-                    // A workaround is to check if the content looks like a command.
-                    
                     const childrenStr = String(props.children);
-                    
                     if (isCommandContent(childrenStr)) {
                        return (
                          <td className={themeClasses.tableTd} {...props}>
@@ -435,15 +363,11 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                          </td>
                        )
                     }
-                    
                     return <td className={themeClasses.tableTd} {...props} />;
                   },
-                  
-                  // Custom Blockquote and Interactive Image Placeholder
                   blockquote: ({node, children, ...props}) => {
                     const contentStr = String(children);
                     const isImagePlaceholder = contentStr.includes('[FOTO:');
-                    
                     if (isImagePlaceholder) {
                       return (
                         <label className={`${themeClasses.imagePlaceholder} print:hidden relative`}>
@@ -466,7 +390,6 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                         </label>
                       );
                     }
-                    
                     return <blockquote className={themeClasses.blockquote} {...props}>{children}</blockquote>;
                   },
                   img: ({node, ...props}) => (
