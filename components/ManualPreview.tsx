@@ -1,29 +1,55 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon, Edit3, Save, Upload } from 'lucide-react';
-import { ManualTheme } from '../types';
+import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon, Edit3, Save, Upload, FolderDown } from 'lucide-react';
+import { ManualTheme, ManualConfig, SavedProject } from '../types';
 
 interface ManualPreviewProps {
   content: string;
+  config: ManualConfig;
   onContentChange: (newContent: string) => void;
   onBack: () => void;
   theme: ManualTheme;
   onThemeChange: (theme: ManualTheme) => void;
 }
 
-const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange, onBack, theme, onThemeChange }) => {
+const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onContentChange, onBack, theme, onThemeChange }) => {
   const [isEditing, setIsEditing] = useState(false);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const handleDownload = () => {
+  const handleDownloadMarkdown = () => {
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `manual_elift_${theme}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSaveProject = () => {
+    // Current config needs to reflect the active theme
+    const currentConfig = { ...config, theme };
+    
+    const projectData: SavedProject = {
+      version: "1.0",
+      timestamp: Date.now(),
+      config: currentConfig,
+      content: content
+    };
+
+    const jsonString = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    // .elift extension makes it feel more like a dedicated file, but it's just JSON
+    a.download = `projekt_elift_${new Date().toISOString().slice(0,10)}.elift`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -78,66 +104,72 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
 
   // Helper to detect if a string looks like a command sequence
   const isCommandContent = (text: string) => {
-    return /[\d\w]{1,5}\s*[↵\+]/.test(text) || text.includes('↵') || text.includes('ENTER') || (text.length < 20 && /^\d[\d\s]*$/.test(text));
+    const trimmed = text.trim();
+    // 1. Contains ENTER symbol explicitly
+    if (trimmed.includes('↵') || trimmed.includes('ENTER')) return true;
+    
+    // 2. Is a short sequence of digits/chars (e.g. "1 0 0" or "0 2 x x")
+    if (trimmed.length < 50 && /^[\d\sxyXY]+(↵|ENTER)?$/.test(trimmed)) return true;
+
+    return false;
   };
 
-  // Custom renderer for Command Cells to create the "Tree/Keycap" look
+  // Custom renderer for Command Cells - LINEAR / BUTTON STYLE
   const CommandCell = ({ children, themeClasses }: { children: React.ReactNode, themeClasses: any }) => {
     const text = String(children);
     
-    // Split text into parts. We separate "Enter" keys from the rest.
-    // Regex matches whitespace OR specific Enter symbols
+    // Split text into parts. 
     const parts = text.split(/(\s+|↵|ENTER|Enter)/).filter(p => p.trim() !== '');
-    
-    // Group logic: Keep non-enter keys together, push Enter to new line
-    const mainKeys: string[] = [];
-    const enterKeys: string[] = [];
-
-    parts.forEach(part => {
-      if (['↵', 'ENTER', 'Enter'].includes(part)) {
-        enterKeys.push('↵'); // Normalize to symbol
-      } else if (!['+', '-', '->'].includes(part)) {
-        mainKeys.push(part);
-      }
-    });
-
-    // If no enter key was found but it's a command cell, just show keys
-    if (enterKeys.length === 0) {
-       return (
-        <div className="flex flex-wrap gap-1 items-center">
-          {mainKeys.map((k, i) => (
-             <span key={i} className={`inline-block px-2 py-1 min-w-[24px] text-center text-xs font-bold shadow-sm border ${themeClasses.keycap}`}>
-               {k}
-             </span>
-          ))}
-        </div>
-       )
-    }
 
     return (
-      <div className="flex flex-col items-start gap-1">
-        {/* Row 1: The sequence numbers/keys */}
-        {mainKeys.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-1">
-             {mainKeys.map((k, i) => (
-               <span key={i} className={`inline-block px-2 py-1 min-w-[24px] text-center text-xs font-bold shadow-sm border ${themeClasses.keycap}`}>
-                 {k}
-               </span>
-            ))}
-          </div>
-        )}
-
-        {/* Row 2: The Tree Branch and Enter Key */}
-        <div className="flex items-center">
-          {/* Tree structure graphic using CSS borders/text */}
-          <span className="text-gray-300 font-light mr-1 text-lg leading-none select-none" style={{ fontFamily: 'monospace' }}>
-             {mainKeys.length > 0 ? '└──' : ''}
-          </span>
+      <div className="flex flex-row flex-wrap items-center gap-1.5 align-middle">
+        {parts.map((part, index) => {
+          const isEnter = ['↵', 'ENTER', 'Enter'].includes(part);
+          const isVar = ['x', 'y', 'X', 'Y'].includes(part);
           
-          <span className={`inline-block px-3 py-1 text-center text-xs font-black shadow-sm border ${themeClasses.keycap} ${themeClasses.enterKey || ''}`}>
-            ↵
-          </span>
-        </div>
+          // ENTER KEY Styling
+          if (isEnter) {
+            return (
+               <span key={index} className={`
+                 inline-flex items-center justify-center 
+                 h-7 px-2.5 
+                 text-[11px] font-black uppercase tracking-wider
+                 rounded shadow-sm ml-1 border
+                 ${themeClasses.enterKey}
+               `}>
+                 ENTER ↵
+               </span>
+            );
+          }
+          
+          // VARIABLE (x, y) Styling
+          if (isVar) {
+             return (
+               <span key={index} className="
+                 inline-flex items-center justify-center 
+                 w-7 h-7 
+                 text-sm italic font-serif text-gray-500 
+                 bg-gray-100 border border-gray-300 rounded
+               ">
+                 {part}
+               </span>
+             );
+          }
+
+          // STANDARD DIGIT KEY Styling
+          return (
+            <span key={index} className={`
+              inline-flex items-center justify-center 
+              w-7 h-7 
+              text-sm font-bold 
+              border-b-[3px] active:border-b-0 active:translate-y-[3px] transition-all
+              rounded
+              ${themeClasses.keycap}
+            `}>
+              {part}
+            </span>
+          );
+        })}
       </div>
     );
   };
@@ -156,9 +188,10 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
           tableTh: "px-6 py-4 text-left align-bottom",
           tableBody: "bg-white divide-y divide-gray-100",
           tableRowEven: "bg-gray-50",
-          tableTd: "px-6 py-4 text-sm text-gray-900 font-medium align-top leading-relaxed first:font-bold first:text-[#dc2626]",
-          keycap: "bg-white border-gray-300 text-gray-800 shadow-[2px_2px_0px_0px_rgba(220,38,38,0.2)] rounded-sm",
-          enterKey: "text-[#dc2626] border-[#dc2626]",
+          tableTd: "px-6 py-4 text-sm text-gray-900 font-medium align-middle leading-relaxed",
+          // Swiss Keycaps: Clean white with red accents
+          keycap: "bg-white border-gray-300 text-gray-800 shadow-sm",
+          enterKey: "bg-[#dc2626] text-white border-[#b91c1c]",
           blockquote: "border-l-[6px] border-[#dc2626] bg-gray-50 text-gray-900 p-6 my-8 font-medium italic shadow-sm",
           code: "bg-gray-100 text-[#dc2626] px-1.5 py-0.5 rounded-sm font-mono text-sm font-bold border border-gray-200",
           strong: "text-gray-900 font-black",
@@ -177,9 +210,10 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
           tableTh: "px-5 py-3 text-left border-r border-gray-800 last:border-r-0 align-top",
           tableBody: "divide-y divide-gray-800",
           tableRowEven: "bg-[#222222]",
-          tableTd: "px-5 py-3 text-sm border-r border-gray-800 last:border-r-0 align-top leading-relaxed first:text-green-400 first:font-bold",
-          keycap: "bg-[#333] border-gray-600 text-green-400 font-mono tracking-widest border-2 rounded",
-          enterKey: "text-orange-500 border-orange-600",
+          tableTd: "px-5 py-4 text-sm border-r border-gray-800 last:border-r-0 align-middle leading-relaxed",
+          // Industrial Keycaps: Dark terminal style
+          keycap: "bg-[#333] border-gray-600 text-green-400 font-mono border-2",
+          enterKey: "bg-orange-600 text-white border-orange-700",
           blockquote: "border-l-4 border-orange-600 bg-gray-200 text-gray-900 p-4 my-4 font-bold italic shadow-sm border-t border-b border-gray-300",
           code: "bg-black text-green-400 px-2 py-0.5 rounded text-sm font-mono border border-gray-700",
           strong: "text-orange-700 font-black",
@@ -198,9 +232,10 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
           tableTh: "px-4 py-3 text-left border-r-4 border-black last:border-r-0 align-top",
           tableBody: "bg-white divide-y-2 divide-black",
           tableRowEven: "bg-yellow-50",
-          tableTd: "px-4 py-3 text-sm text-black font-bold border-r-2 border-black last:border-r-0 align-top leading-relaxed first:bg-white first:text-black",
-          keycap: "bg-black border-black text-yellow-400 font-black rounded-none shadow-[2px_2px_0px_0px_rgba(250,204,21,1)]",
-          enterKey: "bg-yellow-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+          tableTd: "px-4 py-4 text-sm text-black font-bold border-r-2 border-black last:border-r-0 align-middle leading-relaxed",
+          // Construction Keycaps: High contrast black/yellow
+          keycap: "bg-black border-black text-yellow-400 font-black rounded-none shadow-[2px_2px_0px_0px_rgba(250,204,21,1)] border-b-0",
+          enterKey: "bg-yellow-400 text-black border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border",
           blockquote: "bg-yellow-100 border-4 border-black p-6 my-6 font-bold text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
           code: "bg-black text-yellow-400 px-2 py-0.5 font-mono text-sm font-bold",
           strong: "bg-yellow-300 px-1 text-black font-black box-decoration-clone",
@@ -219,9 +254,10 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
           tableTh: "px-8 py-5 text-left align-top",
           tableBody: "bg-white divide-y divide-emerald-50",
           tableRowEven: "bg-[#fafcfb]",
-          tableTd: "px-8 py-4 text-sm text-emerald-800 align-top leading-relaxed first:font-semibold first:text-emerald-900",
+          tableTd: "px-8 py-4 text-sm text-emerald-800 align-middle leading-relaxed",
+          // Elegant Keycaps: Soft, rounded, subtle
           keycap: "bg-white border-emerald-200 text-emerald-800 rounded-md shadow-sm font-sans",
-          enterKey: "text-emerald-900 border-emerald-400 bg-emerald-50",
+          enterKey: "bg-emerald-100 text-emerald-900 border-emerald-300",
           blockquote: "border-l-2 border-emerald-300 bg-emerald-50/50 text-emerald-800 p-6 my-6 italic text-lg relative",
           code: "bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 font-sans text-sm",
           strong: "text-emerald-900 font-semibold",
@@ -241,9 +277,10 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
           tableTh: "px-6 py-4 text-left font-bold align-top tracking-wide text-xs uppercase text-gray-500",
           tableBody: "bg-white divide-y divide-gray-100",
           tableRowEven: "bg-blue-50/20",
-          tableTd: "px-6 py-4 text-sm text-gray-700 align-top leading-relaxed first:font-mono first:text-brand-600 first:font-medium",
-          keycap: "bg-gray-50 border-gray-200 text-gray-600 shadow-sm rounded",
-          enterKey: "bg-white border-brand-300 text-brand-600",
+          tableTd: "px-6 py-4 text-sm text-gray-700 align-middle leading-relaxed",
+          // Modern Keycaps: Clean, SaaS style buttons
+          keycap: "bg-white border-gray-200 text-gray-700 shadow-sm rounded border-b-2",
+          enterKey: "bg-brand-50 border-brand-200 text-brand-600 font-bold",
           blockquote: "border-l-4 border-brand-400 bg-blue-50 text-brand-900 p-4 my-4 rounded-r-lg",
           code: "bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded border border-gray-200 font-mono text-sm font-bold shadow-sm",
           strong: "text-brand-800 font-bold",
@@ -310,14 +347,25 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
               </>
             )}
           </button>
+          
+          {/* Save Project Button */}
+          <button
+            onClick={handleSaveProject}
+            disabled={isEditing}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-700 bg-brand-50 border border-brand-200 rounded-md hover:bg-brand-100 transition-colors disabled:opacity-50"
+            title="Uložiť projekt na disk pre neskoršie úpravy"
+          >
+            <FolderDown className="w-4 h-4" />
+            Uložiť Projekt
+          </button>
 
           <button 
-            onClick={handleDownload}
+            onClick={handleDownloadMarkdown}
             disabled={isEditing}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
-            Stiahnuť
+            Stiahnuť MD
           </button>
           <button 
             onClick={handlePrint}
@@ -380,8 +428,6 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
                     
                     const childrenStr = String(props.children);
                     
-                    // Simple heuristic: If text is short and contains numbers or Enter symbol
-                    // We apply special rendering. This works for the specific table user wants.
                     if (isCommandContent(childrenStr)) {
                        return (
                          <td className={themeClasses.tableTd} {...props}>

@@ -58,33 +58,37 @@ export const generateManualFromPDF = async (
     - **HEADER:** Start the document section with a single line: "**Manufacturer: ${mainBrand}**".
     - **BODY:** Do NOT mention the *original* manufacturer's name, address, or support email in the body text. Use neutral terms like "the device", "the unit", or the new brand name.
 
-    **2. CONTENT FILTRATION (REMOVE JUNK):**
-    - **DELETE** all legal disclaimers, FCC warnings, "Declaration of Conformity" pages, and "Terms of Use".
-    - **DELETE** the original manufacturer's physical addresses, phone numbers, fax numbers, and website URLs found in footers or at the end.
-    - **KEEP** only technical instructions, safety warnings (rephrased neutrally), and specifications.
+    **2. CONTENT FILTRATION:**
+    - **DELETE** legal disclaimers, FCC warnings, "Declaration of Conformity".
+    - **DELETE** addresses/phones in footers.
+    - **KEEP** technical instructions, safety warnings, specifications.
 
-    **3. VISUALS STRATEGY (CRITICAL):**
-    - **DO NOT BE LAZY.** Do not just say "[FOTO]" for everything.
-    - **PINOUTS / WIRING / CHARTS:** You MUST convert these into Markdown Tables or Bullet Lists. Describe the connections (Pin 1 -> +24V, etc.). A table is ALWAYS better than a placeholder.
-    - **PHOTOS:** Only use a placeholder if it is a complex photograph (e.g., a photo of a PCB board, a mounting position) that is impossible to describe in text.
-      - Syntax: \`> **[FOTO: Detailed description]**\`
+    **3. VISUALS STRATEGY:**
+    - **PINOUTS / WIRING:** Convert diagrams to Markdown Tables or Bullet Lists.
+    - **PHOTOS:** Use \`> **[FOTO: Detailed description]**\` only for complex photos.
 
-    **4. DATA PRESENTATION & TABLES (SCREEN DISPLAYS):**
-    - **COMMAND LISTS:** If you see lists of codes/commands (e.g. "0 ↵", "1 0 0 ↵"), you **MUST** format them as a Markdown Table.
-    - **TABLE STRUCTURE:** Use columns: | Command | Function/Description | Notes |.
-    - **CLEANUP:** Do not put too much text in the "Command" column. Keep it short (e.g. "0 ↵"). Put the explanation in the Description.
-    - **SYMBOLS:** Preserve special symbols like '↵' (Enter) if they appear in the source.
+    **4. KEYBOARD COMMAND TABLES (CRITICAL):**
+    - **FORMAT:** You MUST convert lists of keypad commands into a MARKDOWN TABLE.
+    - **COLUMNS:** Use exactly these 3 columns:
+      | Príkaz | Popis | Poznámka |
+      | :--- | :--- | :--- |
+    - **COMMAND SYNTAX:** You MUST separate every key with a space so they can be styled as buttons.
+      - **WRONG:** \`100↵\`
+      - **CORRECT:** \`1 0 0 ↵\`
+      - **CORRECT:** \`0 2 x x ↵\`
+    - **ENTER KEY:** Use the symbol '↵' for Enter.
+    - **VARIABLES:** If the code uses placeholders like 'x' or 'y' (e.g. for floor number), keep them as 'x' or 'y'.
 
     **5. FORMATTING RULES:**
-    - **TABLES:** All technical data (specs, error codes) MUST be Markdown Tables.
+    - **TABLES:** All technical data MUST be Markdown Tables.
     - **HEADINGS:** Use H1 (#) for Main Title, H2 (##) for Chapters.
-    - **STYLE:** Use bolding for key terms (e.g., **24V DC**, **Connector X1**).
+    - **STYLE:** Use bolding for key terms (e.g., **24V DC**).
     
     **PROCESS:**
-    1. Read the PDF content.
-    2. Filter out legal/address info.
-    3. Apply branding replacements.
-    4. Convert visual diagrams and Command Lists to clean Tables.
+    1. Read PDF.
+    2. Filter junk.
+    3. Apply replacements.
+    4. **RECREATE TABLES:** Detect command lists and build the 3-column table described above.
     5. Translate to ${config.targetLanguage}.
 
     **OUTPUT:**

@@ -1,3 +1,4 @@
+
 export interface ReplacementRule {
   id: string;
   original: string;
@@ -25,4 +26,11 @@ export interface GenerationState {
 export interface GeneratedManual {
   content: string; // Markdown content
   title: string;
+}
+
+export interface SavedProject {
+  version: string;
+  timestamp: number;
+  config: ManualConfig;
+  content: string;
 }

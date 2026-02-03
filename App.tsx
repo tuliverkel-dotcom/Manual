@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import SettingsPanel from './components/SettingsPanel';
 import FileUpload from './components/FileUpload';
 import ManualPreview from './components/ManualPreview';
-import { ManualConfig, GenerationState } from './types';
+import { ManualConfig, GenerationState, SavedProject } from './types';
 import { generateManualFromPDF } from './services/geminiService';
 import { splitPdf } from './services/pdfHelpers';
-import { FileText, Sparkles, Scissors } from 'lucide-react';
+import { FileText, Sparkles, Scissors, FolderOpen } from 'lucide-react';
 
 const App: React.FC = () => {
   // Initial Configuration State
@@ -88,6 +88,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const jsonString = event.target?.result as string;
+        const projectData: SavedProject = JSON.parse(jsonString);
+
+        if (projectData.config && projectData.content) {
+          setConfig(projectData.config);
+          setGeneratedContent(projectData.content);
+          setGenerationState({ status: 'completed' });
+        } else {
+          alert('Neplatný formát projektu.');
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Nepodarilo sa načítať projekt. Súbor môže byť poškodený.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset value so we can load the same file again if needed
+    e.target.value = '';
+  };
+
   const reset = () => {
     setGeneratedContent(null);
     setGenerationState({ status: 'idle' });
@@ -98,6 +125,7 @@ const App: React.FC = () => {
     return (
       <ManualPreview 
         content={generatedContent} 
+        config={config}
         onContentChange={setGeneratedContent}
         onBack={reset} 
         theme={config.theme}
@@ -120,7 +148,7 @@ const App: React.FC = () => {
             </h1>
           </div>
           <div className="text-sm text-gray-500 hidden sm:block">
-            Verzia 1.4 • Editor & Obrázky
+            Verzia 1.5 • Projektový manažér
           </div>
         </div>
       </header>
@@ -146,16 +174,45 @@ const App: React.FC = () => {
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Generátor Profesionálnej Dokumentácie</h2>
               <p className="text-gray-600 leading-relaxed">
                 Nahrajte celý PDF manuál. Aplikácia ho spracuje a umožní vám vybrať si 
-                <strong> vizuálny štýl</strong> (Moderný, Technický, Elegantný).
+                <strong> vizuálny štýl</strong>. <br/>
+                Už ste na tomto manuáli pracovali? <strong>Otvorte uložený projekt.</strong>
               </p>
             </div>
 
             {/* Upload Area */}
-            <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center">
+            <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center relative">
+              
               <FileUpload 
                 onFileUpload={handleFileUpload} 
                 state={generationState} 
               />
+
+              {/* Load Project Divider */}
+              <div className="my-6 flex items-center gap-4">
+                <div className="h-px bg-gray-200 flex-1"></div>
+                <span className="text-gray-400 text-sm font-medium">ALEBO</span>
+                <div className="h-px bg-gray-200 flex-1"></div>
+              </div>
+
+              {/* Load Project Button */}
+              <div className="flex justify-center">
+                 <label className={`
+                    flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all shadow-sm border border-gray-300
+                    ${generationState.status === 'processing' || generationState.status === 'analyzing' 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      : 'bg-white text-gray-700 hover:bg-gray-50 cursor-pointer hover:border-gray-400'}
+                 `}>
+                   <FolderOpen className="w-5 h-5" />
+                   Otvoriť rozpracovaný projekt (.elift)
+                   <input 
+                    type="file" 
+                    accept=".json,.elift" 
+                    className="hidden" 
+                    onChange={handleLoadProject}
+                    disabled={generationState.status === 'processing' || generationState.status === 'analyzing'}
+                   />
+                 </label>
+              </div>
 
               {/* Tips */}
               <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-500">
@@ -167,9 +224,9 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="bg-blue-100 p-1 rounded text-blue-600 mt-0.5">
-                    <Sparkles className="w-3 h-3" />
+                    <FolderOpen className="w-3 h-3" />
                   </div>
-                  <span>Vizuálne témy (Farby, Štýly)</span>
+                  <span>Ukladanie a načítanie projektov</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="bg-purple-100 p-1 rounded text-purple-600 mt-0.5">
