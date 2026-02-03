@@ -69,7 +69,13 @@ export const generateManualFromPDF = async (
     - **PHOTOS:** Only use a placeholder if it is a complex photograph (e.g., a photo of a PCB board, a mounting position) that is impossible to describe in text.
       - Syntax: \`> **[FOTO: Detailed description]**\`
 
-    **4. FORMATTING RULES:**
+    **4. DATA PRESENTATION & TABLES (SCREEN DISPLAYS):**
+    - **COMMAND LISTS:** If you see lists of codes/commands (e.g. "0 ↵", "1 0 0 ↵"), you **MUST** format them as a Markdown Table.
+    - **TABLE STRUCTURE:** Use columns: | Command | Function/Description | Notes |.
+    - **CLEANUP:** Do not put too much text in the "Command" column. Keep it short (e.g. "0 ↵"). Put the explanation in the Description.
+    - **SYMBOLS:** Preserve special symbols like '↵' (Enter) if they appear in the source.
+
+    **5. FORMATTING RULES:**
     - **TABLES:** All technical data (specs, error codes) MUST be Markdown Tables.
     - **HEADINGS:** Use H1 (#) for Main Title, H2 (##) for Chapters.
     - **STYLE:** Use bolding for key terms (e.g., **24V DC**, **Connector X1**).
@@ -78,7 +84,7 @@ export const generateManualFromPDF = async (
     1. Read the PDF content.
     2. Filter out legal/address info.
     3. Apply branding replacements.
-    4. Convert visual diagrams to Tables (Pinout/Specs).
+    4. Convert visual diagrams and Command Lists to clean Tables.
     5. Translate to ${config.targetLanguage}.
 
     **OUTPUT:**

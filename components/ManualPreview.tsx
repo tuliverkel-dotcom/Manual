@@ -30,42 +30,135 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
     URL.revokeObjectURL(url);
   };
 
-  // Function to replace a specific placeholder with an uploaded image
   const handleImageUpload = (placeholderText: string, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      // Construct the Markdown Image syntax
-      // We assume the placeholder is inside a blockquote like > **[FOTO: ...]**
-      // We will replace the entire line containing the placeholder text
-      
       const newImageMarkdown = `\n![Obrázok](${base64String})\n*${placeholderText.replace('[FOTO:', '').replace(']', '')}*\n`;
-      
-      // We need to find the specific blockquote in the content. 
-      // This is a simple string replacement. Ideally we'd be more precise, but this works for 99% cases.
       const updatedContent = content.replace(`> **${placeholderText}**`, newImageMarkdown);
-      
       onContentChange(updatedContent);
     };
     reader.readAsDataURL(file);
   };
 
-  // Define theme-specific classes
+  // Handle Ctrl+V (Paste) in Textarea
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData.items;
+    let foundImage = false;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        e.preventDefault(); // Stop default text pasting if it's an image
+        foundImage = true;
+        
+        const blob = items[i].getAsFile();
+        if (blob) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            const imageMarkdown = `\n![Vložený obrázok](${base64})\n`;
+            
+            // Insert at cursor position
+            const textarea = e.currentTarget;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const currentText = content;
+            
+            const before = currentText.substring(0, start);
+            const after = currentText.substring(end);
+            
+            const newContent = before + imageMarkdown + after;
+            onContentChange(newContent);
+          };
+          reader.readAsDataURL(blob);
+        }
+      }
+    }
+  };
+
+  // Helper to detect if a string looks like a command sequence
+  const isCommandContent = (text: string) => {
+    return /[\d\w]{1,5}\s*[↵\+]/.test(text) || text.includes('↵') || text.includes('ENTER') || (text.length < 20 && /^\d[\d\s]*$/.test(text));
+  };
+
+  // Custom renderer for Command Cells to create the "Tree/Keycap" look
+  const CommandCell = ({ children, themeClasses }: { children: React.ReactNode, themeClasses: any }) => {
+    const text = String(children);
+    
+    // Split text into parts. We separate "Enter" keys from the rest.
+    // Regex matches whitespace OR specific Enter symbols
+    const parts = text.split(/(\s+|↵|ENTER|Enter)/).filter(p => p.trim() !== '');
+    
+    // Group logic: Keep non-enter keys together, push Enter to new line
+    const mainKeys: string[] = [];
+    const enterKeys: string[] = [];
+
+    parts.forEach(part => {
+      if (['↵', 'ENTER', 'Enter'].includes(part)) {
+        enterKeys.push('↵'); // Normalize to symbol
+      } else if (!['+', '-', '->'].includes(part)) {
+        mainKeys.push(part);
+      }
+    });
+
+    // If no enter key was found but it's a command cell, just show keys
+    if (enterKeys.length === 0) {
+       return (
+        <div className="flex flex-wrap gap-1 items-center">
+          {mainKeys.map((k, i) => (
+             <span key={i} className={`inline-block px-2 py-1 min-w-[24px] text-center text-xs font-bold shadow-sm border ${themeClasses.keycap}`}>
+               {k}
+             </span>
+          ))}
+        </div>
+       )
+    }
+
+    return (
+      <div className="flex flex-col items-start gap-1">
+        {/* Row 1: The sequence numbers/keys */}
+        {mainKeys.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1">
+             {mainKeys.map((k, i) => (
+               <span key={i} className={`inline-block px-2 py-1 min-w-[24px] text-center text-xs font-bold shadow-sm border ${themeClasses.keycap}`}>
+                 {k}
+               </span>
+            ))}
+          </div>
+        )}
+
+        {/* Row 2: The Tree Branch and Enter Key */}
+        <div className="flex items-center">
+          {/* Tree structure graphic using CSS borders/text */}
+          <span className="text-gray-300 font-light mr-1 text-lg leading-none select-none" style={{ fontFamily: 'monospace' }}>
+             {mainKeys.length > 0 ? '└──' : ''}
+          </span>
+          
+          <span className={`inline-block px-3 py-1 text-center text-xs font-black shadow-sm border ${themeClasses.keycap} ${themeClasses.enterKey || ''}`}>
+            ↵
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   const getThemeClasses = () => {
     switch (theme) {
       case 'swiss':
         return {
           wrapper: "font-sans",
           h1: "text-5xl font-black text-gray-900 tracking-tighter mb-8 pt-4 uppercase leading-none",
-          h2: "text-2xl font-bold text-gray-900 mt-10 mb-4 flex items-center gap-4 before:content-[''] before:block before:w-6 before:h-6 before:bg-[#dc2626]",
-          h3: "text-lg font-bold text-[#dc2626] mt-8 mb-2 uppercase tracking-widest border-b border-gray-200 pb-1",
-          tableContainer: "my-8 w-full border-t-2 border-gray-900",
-          table: "min-w-full divide-y divide-gray-900",
-          tableHeader: "bg-[#dc2626] text-white font-bold text-sm uppercase tracking-wider",
-          tableTh: "px-3 py-3 text-left border-r border-red-500 last:border-r-0",
-          tableBody: "bg-white divide-y divide-gray-200",
+          h2: "text-2xl font-bold text-gray-900 mt-12 mb-6 flex items-center gap-4 before:content-[''] before:block before:w-6 before:h-6 before:bg-[#dc2626]",
+          h3: "text-lg font-bold text-[#dc2626] mt-8 mb-4 uppercase tracking-widest border-b border-gray-200 pb-1",
+          tableContainer: "my-8 w-full border-t-4 border-[#dc2626] overflow-x-auto bg-white shadow-sm",
+          table: "min-w-full divide-y divide-gray-200 table-auto",
+          tableHeader: "bg-white text-[#dc2626] font-black text-xs uppercase tracking-widest",
+          tableTh: "px-6 py-4 text-left align-bottom",
+          tableBody: "bg-white divide-y divide-gray-100",
           tableRowEven: "bg-gray-50",
-          tableTd: "px-3 py-2 text-sm text-gray-900 font-medium border-r border-gray-200 last:border-r-0",
+          tableTd: "px-6 py-4 text-sm text-gray-900 font-medium align-top leading-relaxed first:font-bold first:text-[#dc2626]",
+          keycap: "bg-white border-gray-300 text-gray-800 shadow-[2px_2px_0px_0px_rgba(220,38,38,0.2)] rounded-sm",
+          enterKey: "text-[#dc2626] border-[#dc2626]",
           blockquote: "border-l-[6px] border-[#dc2626] bg-gray-50 text-gray-900 p-6 my-8 font-medium italic shadow-sm",
           code: "bg-gray-100 text-[#dc2626] px-1.5 py-0.5 rounded-sm font-mono text-sm font-bold border border-gray-200",
           strong: "text-gray-900 font-black",
@@ -74,55 +167,61 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
         };
       case 'industrial':
         return {
-          wrapper: "font-mono",
-          h1: "text-3xl font-black text-orange-600 uppercase border-b-4 border-black pb-2 mb-6 tracking-tight",
-          h2: "text-2xl font-bold text-gray-900 border-l-8 border-orange-500 pl-3 uppercase tracking-wide mt-8 mb-4",
-          h3: "text-lg font-bold text-gray-800 mt-6 mb-2 underline decoration-orange-400 decoration-2",
-          tableContainer: "my-6 w-full border-2 border-black",
-          table: "min-w-full divide-y-2 divide-black",
-          tableHeader: "bg-gray-900 text-white uppercase text-xs tracking-widest",
-          tableTh: "px-4 py-2 text-left border-r border-gray-700 last:border-r-0",
-          tableBody: "bg-white divide-y divide-black",
-          tableRowEven: "bg-orange-50",
-          tableTd: "px-4 py-2 text-sm text-gray-800 border-r border-black last:border-r-0 font-mono",
-          blockquote: "border-l-4 border-orange-500 bg-orange-50 text-gray-800 p-4 my-4 font-bold italic shadow-sm",
-          code: "bg-gray-800 text-white px-2 py-0.5 rounded text-sm font-mono",
+          wrapper: "font-mono bg-[#e5e5e5]",
+          h1: "text-3xl font-black text-gray-900 uppercase border-b-4 border-orange-600 pb-4 mb-8 tracking-tight",
+          h2: "text-2xl font-bold text-gray-900 border-l-[12px] border-orange-600 pl-4 uppercase tracking-wide mt-10 mb-6 bg-gray-200 py-2",
+          h3: "text-lg font-bold text-gray-800 mt-8 mb-4 underline decoration-orange-600 decoration-4 underline-offset-4",
+          tableContainer: "my-10 w-full bg-[#1a1a1a] border-4 border-gray-800 rounded-lg shadow-xl overflow-hidden overflow-x-auto",
+          table: "min-w-full divide-y divide-gray-700 table-auto text-gray-300 font-mono",
+          tableHeader: "bg-gray-900 text-orange-500 uppercase text-xs tracking-widest border-b border-gray-700",
+          tableTh: "px-5 py-3 text-left border-r border-gray-800 last:border-r-0 align-top",
+          tableBody: "divide-y divide-gray-800",
+          tableRowEven: "bg-[#222222]",
+          tableTd: "px-5 py-3 text-sm border-r border-gray-800 last:border-r-0 align-top leading-relaxed first:text-green-400 first:font-bold",
+          keycap: "bg-[#333] border-gray-600 text-green-400 font-mono tracking-widest border-2 rounded",
+          enterKey: "text-orange-500 border-orange-600",
+          blockquote: "border-l-4 border-orange-600 bg-gray-200 text-gray-900 p-4 my-4 font-bold italic shadow-sm border-t border-b border-gray-300",
+          code: "bg-black text-green-400 px-2 py-0.5 rounded text-sm font-mono border border-gray-700",
           strong: "text-orange-700 font-black",
-          link: "text-orange-600 underline hover:text-orange-800",
-          imagePlaceholder: "bg-gray-200 border-2 border-black p-6 my-6 flex flex-col items-center justify-center text-center hover:bg-orange-100 cursor-pointer group"
+          link: "text-orange-700 underline hover:text-orange-900",
+          imagePlaceholder: "bg-gray-200 border-4 border-gray-400 p-6 my-6 flex flex-col items-center justify-center text-center hover:bg-orange-100 cursor-pointer group"
         };
       case 'construction': // Yellow / Black
         return {
           wrapper: "font-sans",
-          h1: "text-4xl font-black text-black border-b-[6px] border-yellow-400 pb-2 mb-8 uppercase tracking-tighter",
-          h2: "text-2xl font-bold bg-black text-yellow-400 px-4 py-2 mt-10 mb-4 inline-block uppercase transform -skew-x-6",
-          h3: "text-lg font-bold text-black mt-8 mb-2 border-l-8 border-yellow-400 pl-3 uppercase",
-          tableContainer: "my-8 w-full border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
-          table: "min-w-full divide-y-2 divide-black",
-          tableHeader: "bg-yellow-400 text-black font-black uppercase text-sm border-b-2 border-black",
-          tableTh: "px-4 py-3 text-left border-r border-black last:border-r-0",
-          tableBody: "bg-white divide-y divide-black",
+          h1: "text-4xl font-black text-black border-b-[8px] border-yellow-400 pb-2 mb-8 uppercase tracking-tighter",
+          h2: "text-2xl font-bold bg-black text-yellow-400 px-6 py-3 mt-12 mb-6 inline-block uppercase transform -skew-x-6 shadow-[8px_8px_0px_0px_rgba(250,204,21,1)]",
+          h3: "text-lg font-bold text-black mt-8 mb-4 border-l-[10px] border-yellow-400 pl-3 uppercase",
+          tableContainer: "my-8 w-full border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-x-auto bg-white",
+          table: "min-w-full divide-y-2 divide-black table-auto",
+          tableHeader: "bg-yellow-400 text-black font-black uppercase text-sm border-b-4 border-black",
+          tableTh: "px-4 py-3 text-left border-r-4 border-black last:border-r-0 align-top",
+          tableBody: "bg-white divide-y-2 divide-black",
           tableRowEven: "bg-yellow-50",
-          tableTd: "px-4 py-3 text-sm text-black font-medium border-r border-black last:border-r-0",
-          blockquote: "bg-yellow-50 border-2 border-black p-6 my-6 font-bold text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+          tableTd: "px-4 py-3 text-sm text-black font-bold border-r-2 border-black last:border-r-0 align-top leading-relaxed first:bg-white first:text-black",
+          keycap: "bg-black border-black text-yellow-400 font-black rounded-none shadow-[2px_2px_0px_0px_rgba(250,204,21,1)]",
+          enterKey: "bg-yellow-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+          blockquote: "bg-yellow-100 border-4 border-black p-6 my-6 font-bold text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
           code: "bg-black text-yellow-400 px-2 py-0.5 font-mono text-sm font-bold",
-          strong: "bg-yellow-200 px-1 text-black font-black box-decoration-clone",
+          strong: "bg-yellow-300 px-1 text-black font-black box-decoration-clone",
           link: "text-black underline decoration-yellow-400 decoration-4 hover:bg-yellow-400 transition-colors",
-          imagePlaceholder: "bg-yellow-100 border-4 border-black border-dashed p-8 my-8 flex flex-col items-center justify-center text-center font-bold text-black hover:bg-yellow-200 cursor-pointer group shadow-sm"
+          imagePlaceholder: "bg-yellow-50 border-4 border-black border-dashed p-8 my-8 flex flex-col items-center justify-center text-center font-bold text-black hover:bg-yellow-200 cursor-pointer group shadow-sm"
         };
       case 'elegant':
         return {
           wrapper: "font-serif",
           h1: "text-4xl font-normal text-emerald-900 border-b border-emerald-200 pb-4 mb-8 italic text-center",
-          h2: "text-2xl font-normal text-emerald-800 mt-8 mb-4 flex items-center gap-2",
-          h3: "text-xl font-medium text-emerald-700 mt-6 mb-2 italic",
-          tableContainer: "my-8 w-full border border-emerald-100 rounded-lg overflow-hidden shadow-sm",
-          table: "min-w-full divide-y divide-emerald-100",
-          tableHeader: "bg-emerald-50 text-emerald-900 font-normal",
-          tableTh: "px-6 py-3 text-left",
+          h2: "text-2xl font-normal text-emerald-800 mt-10 mb-6 flex items-center gap-2",
+          h3: "text-xl font-medium text-emerald-700 mt-8 mb-4 italic",
+          tableContainer: "my-8 w-full border border-emerald-100 rounded-xl overflow-hidden shadow-lg overflow-x-auto",
+          table: "min-w-full divide-y divide-emerald-100 table-auto",
+          tableHeader: "bg-emerald-50 text-emerald-900 font-medium tracking-wide",
+          tableTh: "px-8 py-5 text-left align-top",
           tableBody: "bg-white divide-y divide-emerald-50",
           tableRowEven: "bg-[#fafcfb]",
-          tableTd: "px-6 py-3 text-sm text-emerald-800",
+          tableTd: "px-8 py-4 text-sm text-emerald-800 align-top leading-relaxed first:font-semibold first:text-emerald-900",
+          keycap: "bg-white border-emerald-200 text-emerald-800 rounded-md shadow-sm font-sans",
+          enterKey: "text-emerald-900 border-emerald-400 bg-emerald-50",
           blockquote: "border-l-2 border-emerald-300 bg-emerald-50/50 text-emerald-800 p-6 my-6 italic text-lg relative",
           code: "bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 font-sans text-sm",
           strong: "text-emerald-900 font-semibold",
@@ -134,15 +233,17 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
         return {
           wrapper: "font-sans",
           h1: "text-3xl font-bold text-brand-900 border-b-2 border-brand-100 pb-2 mb-6",
-          h2: "text-2xl font-semibold text-brand-700 mt-8 mb-4 flex items-center",
-          h3: "text-lg font-semibold text-brand-600 mt-6 mb-2",
-          tableContainer: "my-6 w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm",
-          table: "min-w-full divide-y divide-gray-200",
-          tableHeader: "bg-brand-600 text-white",
-          tableTh: "px-4 py-3 text-left font-semibold",
-          tableBody: "bg-white divide-y divide-gray-200",
-          tableRowEven: "bg-brand-50/30",
-          tableTd: "px-4 py-3 text-sm text-gray-700",
+          h2: "text-2xl font-semibold text-brand-700 mt-10 mb-6 flex items-center",
+          h3: "text-lg font-semibold text-brand-600 mt-8 mb-4",
+          tableContainer: "my-8 w-full border border-gray-200 rounded-lg overflow-hidden shadow-md overflow-x-auto ring-1 ring-gray-100",
+          table: "min-w-full divide-y divide-gray-200 table-auto",
+          tableHeader: "bg-gray-50 text-brand-900",
+          tableTh: "px-6 py-4 text-left font-bold align-top tracking-wide text-xs uppercase text-gray-500",
+          tableBody: "bg-white divide-y divide-gray-100",
+          tableRowEven: "bg-blue-50/20",
+          tableTd: "px-6 py-4 text-sm text-gray-700 align-top leading-relaxed first:font-mono first:text-brand-600 first:font-medium",
+          keycap: "bg-gray-50 border-gray-200 text-gray-600 shadow-sm rounded",
+          enterKey: "bg-white border-brand-300 text-brand-600",
           blockquote: "border-l-4 border-brand-400 bg-blue-50 text-brand-900 p-4 my-4 rounded-r-lg",
           code: "bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded border border-gray-200 font-mono text-sm font-bold shadow-sm",
           strong: "text-brand-800 font-bold",
@@ -180,7 +281,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
             >
               <option value="modern">Moderný (Modrý)</option>
               <option value="construction">Technický (Žltý)</option>
-              <option value="industrial">Industrial (Oranž)</option>
+              <option value="industrial">Industrial (Terminál)</option>
               <option value="elegant">Elegantný (Zelený)</option>
               <option value="swiss">Swiss (Červený)</option>
             </select>
@@ -230,30 +331,33 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
       </div>
 
       {/* Content Area */}
-      <div className={`flex-1 overflow-y-auto p-8 flex justify-center bg-gray-100/50 ${themeClasses.wrapper}`}>
+      <div className={`flex-1 overflow-y-auto p-8 flex justify-center ${themeClasses.wrapper}`}>
         
         {isEditing ? (
           // EDIT MODE: Textarea
           <div className="w-full max-w-[210mm] h-full flex flex-col">
             <div className="bg-yellow-50 border border-yellow-200 p-4 mb-4 rounded-md text-sm text-yellow-800 flex items-start gap-2">
-              <Edit3 className="w-4 h-4 mt-0.5" />
+              <Edit3 className="w-4 h-4 mt-0.5 shrink-0" />
               <div>
-                <strong>Režim úprav:</strong> Tu môžete voľne prepisovať text, mazať placeholdery alebo opravovať preklad. 
-                Zmeny sa prejavia okamžite po prepnutí späť.
+                <strong>Režim úprav:</strong> Tu môžete voľne prepisovať text. 
+                <br />
+                <strong>TIP:</strong> Ak stlačíte <strong>Ctrl+V</strong> a máte v schránke obrázok, automaticky sa vloží na miesto kurzora.
               </div>
             </div>
             <textarea
               value={content}
               onChange={(e) => onContentChange(e.target.value)}
+              onPaste={handlePaste}
               className="w-full h-full min-h-[500px] p-6 font-mono text-sm bg-white border border-gray-300 rounded-lg shadow-inner resize-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
               spellCheck={false}
+              placeholder="Sem píšte text alebo vložte obrázok (Ctrl+V)..."
             />
           </div>
         ) : (
           // PREVIEW MODE: React Markdown
           <div className="bg-white shadow-xl w-full max-w-[210mm] min-h-[297mm] p-[20mm] mx-auto print:w-full print:max-w-none print:shadow-none print:p-0 print:m-0">
             
-            <article className="prose max-w-none prose-p:leading-relaxed prose-li:my-1">
+            <article className="prose max-w-none prose-p:leading-relaxed prose-li:my-1 prose-td:align-top">
               <ReactMarkdown
                 components={{
                   h1: ({node, ...props}) => <h1 className={themeClasses.h1} {...props} />,
@@ -268,7 +372,26 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, onContentChange,
                   tbody: ({node, ...props}) => <tbody className={themeClasses.tableBody} {...props} />,
                   tr: ({node, ...props}) => <tr className={`even:${themeClasses.tableRowEven}`} {...props} />,
                   th: ({node, ...props}) => <th className={themeClasses.tableTh} {...props} />,
-                  td: ({node, ...props}) => <td className={themeClasses.tableTd} {...props} />,
+                  td: ({node, ...props}) => {
+                    // Check if this is the first column (Command column)
+                    // Unfortunately, react-markdown doesn't give us column index easily in props.
+                    // We can infer it if it's the first child of the TR, but React nodes are complex.
+                    // A workaround is to check if the content looks like a command.
+                    
+                    const childrenStr = String(props.children);
+                    
+                    // Simple heuristic: If text is short and contains numbers or Enter symbol
+                    // We apply special rendering. This works for the specific table user wants.
+                    if (isCommandContent(childrenStr)) {
+                       return (
+                         <td className={themeClasses.tableTd} {...props}>
+                            <CommandCell themeClasses={themeClasses}>{props.children}</CommandCell>
+                         </td>
+                       )
+                    }
+                    
+                    return <td className={themeClasses.tableTd} {...props} />;
+                  },
                   
                   // Custom Blockquote and Interactive Image Placeholder
                   blockquote: ({node, children, ...props}) => {
