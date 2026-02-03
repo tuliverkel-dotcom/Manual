@@ -66,6 +66,21 @@ const ThemeThumbnail = ({ theme, isActive }: { theme: ManualTheme; isActive: boo
       </div>
     );
   }
+  if (theme === 'construction') {
+    return (
+      <div className={`w-12 h-16 bg-white border-2 border-black rounded-none overflow-hidden flex flex-col transition-all ${isActive ? 'ring-2 ring-yellow-500 ring-offset-2' : ''}`}>
+        <div className="h-3 w-full bg-yellow-400 border-b-2 border-black flex items-center justify-center">
+          <div className="w-8 h-0.5 bg-black/20"></div>
+        </div>
+        <div className="p-1.5 space-y-1">
+           <div className="h-2 w-full bg-black mb-1"></div>
+           <div className="h-1 w-full bg-gray-300"></div>
+           <div className="h-1 w-2/3 bg-gray-300"></div>
+           <div className="mt-2 h-3 w-full bg-yellow-50 border border-black border-dashed"></div>
+        </div>
+      </div>
+    );
+  }
   return null;
 };
 
@@ -177,7 +192,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ config, setConfig, disabl
         <div className="grid grid-cols-1 gap-3">
           {[
             { id: 'modern', name: 'Moderný', desc: 'Čistý modrý dizajn' },
-            { id: 'industrial', name: 'Technický', desc: 'Výrazný oranžový kontrast' },
+            { id: 'construction', name: 'Technický (Žltý)', desc: 'High-vis žltá a čierna' },
+            { id: 'industrial', name: 'Industrial (Oranž)', desc: 'Výrazný oranžový kontrast' },
             { id: 'elegant', name: 'Elegantný', desc: 'Jemný pätkový štýl' },
             { id: 'swiss', name: 'Swiss (Červený)', desc: 'Minimalistický, výrazný' }
           ].map((theme) => {

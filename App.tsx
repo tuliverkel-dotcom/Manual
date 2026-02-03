@@ -98,6 +98,7 @@ const App: React.FC = () => {
     return (
       <ManualPreview 
         content={generatedContent} 
+        onContentChange={setGeneratedContent}
         onBack={reset} 
         theme={config.theme}
         onThemeChange={(newTheme) => setConfig({ ...config, theme: newTheme })}
@@ -119,7 +120,7 @@ const App: React.FC = () => {
             </h1>
           </div>
           <div className="text-sm text-gray-500 hidden sm:block">
-            Verzia 1.3 • Theming & Styling
+            Verzia 1.4 • Editor & Obrázky
           </div>
         </div>
       </header>

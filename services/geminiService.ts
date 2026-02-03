@@ -39,50 +39,50 @@ export const generateManualFromPDF = async (
 
   // Construct the replacements list string
   const replacementInstructions = config.replacements
-    .map(r => `- Replace "${r.original}" with "${r.replacement}"`)
+    .map(r => `- STRICTLY REPLACE "${r.original}" WITH "${r.replacement}" everywhere.`)
     .join('\n');
 
+  // Find the primary company name replacement (usually the first rule or generic)
+  const mainBrand = config.replacements.length > 0 ? config.replacements[0].replacement : "Elift Solutions";
+
   const prompt = `
-    You are an expert technical writer and translator specialized in industrial manuals (elevators, electronics). 
-    Your task is to transform the attached PDF document section into a professional technical document.
+    You are an expert technical writer re-authoring a manual for a new brand.
+    Your goal is to create a clean, professional Markdown document based on the attached PDF.
 
     **CONFIGURATION:**
-    - Target Language: ${config.targetLanguage} (Translate everything to this language).
+    - Target Language: ${config.targetLanguage} (Translate everything).
     - Tone: ${config.tone}.
     
-    **REPLACEMENT RULES (STRICT):**
+    **1. BRANDING & REPLACEMENTS (VERY IMPORTANT):**
     ${replacementInstructions}
+    - **HEADER:** Start the document section with a single line: "**Manufacturer: ${mainBrand}**".
+    - **BODY:** Do NOT mention the *original* manufacturer's name, address, or support email in the body text. Use neutral terms like "the device", "the unit", or the new brand name.
 
-    **FORMATTING RULES (CRITICAL):**
-    1. **TABLES ARE MANDATORY:** If the PDF contains any tabular data (technical specifications, error codes, parameters, pin assignments), YOU MUST output it as a Markdown Table. 
-       - Do NOT convert tables into lists or plain text. 
-       - Maintain the headers.
-       - If a table describes inputs/outputs (Pinout), keep it strictly as a table.
+    **2. CONTENT FILTRATION (REMOVE JUNK):**
+    - **DELETE** all legal disclaimers, FCC warnings, "Declaration of Conformity" pages, and "Terms of Use".
+    - **DELETE** the original manufacturer's physical addresses, phone numbers, fax numbers, and website URLs found in footers or at the end.
+    - **KEEP** only technical instructions, safety warnings (rephrased neutrally), and specifications.
 
-    2. **PINOUTS & CONNECTIONS:** 
-       - Descriptions of terminals, connectors (e.g., X1, X2, Inputs), and LEDs must be formatted as TABLES or clearly defined Definition Lists.
-       - Do not clump technical data into paragraphs.
+    **3. VISUALS STRATEGY (CRITICAL):**
+    - **DO NOT BE LAZY.** Do not just say "[FOTO]" for everything.
+    - **PINOUTS / WIRING / CHARTS:** You MUST convert these into Markdown Tables or Bullet Lists. Describe the connections (Pin 1 -> +24V, etc.). A table is ALWAYS better than a placeholder.
+    - **PHOTOS:** Only use a placeholder if it is a complex photograph (e.g., a photo of a PCB board, a mounting position) that is impossible to describe in text.
+      - Syntax: \`> **[FOTO: Detailed description]**\`
 
-    3. **IMAGES & DIAGRAMS:** 
-       - Since you cannot output images directly, create a visual placeholder block.
-       - Use this exact syntax for image placeholders: 
-         > **[FOTO: Detailed description of what is in the image]**
-       - If the image describes specific product parts, list them immediately after the placeholder.
-
-    4. **STRUCTURE:**
-       - Use H1 (#) for the main title of the section.
-       - Use H2 (##) for subsections.
-       - Use H3 (###) for specific component details.
-       - Use **bold** for component names (e.g., **MLC-800**, **X1 Connector**).
-
+    **4. FORMATTING RULES:**
+    - **TABLES:** All technical data (specs, error codes) MUST be Markdown Tables.
+    - **HEADINGS:** Use H1 (#) for Main Title, H2 (##) for Chapters.
+    - **STYLE:** Use bolding for key terms (e.g., **24V DC**, **Connector X1**).
+    
     **PROCESS:**
-    1. Read the PDF.
-    2. Identify tables and pinouts.
-    3. Translate and Format to Markdown.
-    4. Apply replacements (e.g., change product names).
+    1. Read the PDF content.
+    2. Filter out legal/address info.
+    3. Apply branding replacements.
+    4. Convert visual diagrams to Tables (Pinout/Specs).
+    5. Translate to ${config.targetLanguage}.
 
     **OUTPUT:**
-    Return ONLY the Markdown string. No introduction, no markdown code block fences (like \`\`\`). Start directly with the content.
+    Return ONLY the Markdown string. No chat interaction.
   `;
 
   // Use a model recommended for basic text tasks

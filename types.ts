@@ -4,7 +4,7 @@ export interface ReplacementRule {
   replacement: string;
 }
 
-export type ManualTheme = 'modern' | 'industrial' | 'elegant' | 'swiss';
+export type ManualTheme = 'modern' | 'industrial' | 'elegant' | 'swiss' | 'construction';
 
 export interface ManualConfig {
   apiKey?: string;
