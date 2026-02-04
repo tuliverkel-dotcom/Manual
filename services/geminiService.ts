@@ -7,7 +7,6 @@ export const fileToGenerativePart = async (file: File): Promise<{ inlineData: { 
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
       const base64Data = base64String.split(',')[1];
       resolve({
         inlineData: {
@@ -21,11 +20,74 @@ export const fileToGenerativePart = async (file: File): Promise<{ inlineData: { 
   });
 };
 
+/**
+ * STRICT TABLE FIXER
+ * Scans markdown, identifies tables, determines required column count from the header separator,
+ * and forces every row to have that many cells by appending empty ones.
+ */
+const fixTableFormatting = (markdown: string): string => {
+  const lines = markdown.split('\n');
+  const processedLines: string[] = [];
+  
+  let inTable = false;
+  let expectedPipes = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // 1. Detect Header Separator (e.g., |---|---|)
+    if (line.match(/^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/)) {
+      inTable = true;
+      // Count pipes to determine columns. Standard md table row: | A | B | -> 3 pipes for 2 cols (if enclosed)
+      // Robust way: split by pipe, filter empty strings if it starts/ends with pipe
+      expectedPipes = (line.match(/\|/g) || []).length;
+      processedLines.push(line);
+      continue;
+    }
+
+    // 2. Process Table Rows
+    if (inTable) {
+      // Check if we are still in a table (line starts with pipe)
+      if (line.startsWith('|')) {
+        const currentPipes = (line.match(/\|/g) || []).length;
+        
+        if (currentPipes < expectedPipes) {
+          // Fix ragged row: Add missing cells
+          const missingPipes = expectedPipes - currentPipes;
+          let fixedLine = line;
+          
+          // If line ends with |, we need to add " |" N times.
+          // If it doesn't end with |, we need to add " |" N+1 times to close it + add cols.
+          // Assuming standard "enclosed" tables from LLM.
+          
+          if (fixedLine.endsWith('|')) {
+             fixedLine += " |".repeat(missingPipes);
+          } else {
+             fixedLine += " |".repeat(missingPipes + 1);
+          }
+          processedLines.push(fixedLine);
+        } else {
+          processedLines.push(line);
+        }
+      } else {
+        // End of table
+        inTable = false;
+        expectedPipes = 0;
+        processedLines.push(lines[i]); // Push original line
+      }
+    } else {
+      // Normal text
+      processedLines.push(lines[i]);
+    }
+  }
+
+  return processedLines.join('\n');
+};
+
 export const generateManualFromPDF = async (
   file: File,
   config: ManualConfig
 ): Promise<string> => {
-  // Use provided key or fallback to env var
   const apiKey = config.apiKey || process.env.API_KEY;
   
   if (!apiKey) {
@@ -33,69 +95,48 @@ export const generateManualFromPDF = async (
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  
-  // Prepare the file part
   const pdfPart = await fileToGenerativePart(file);
 
-  // Construct the replacements list string
   const replacementInstructions = config.replacements
     .map(r => `- STRICTLY REPLACE "${r.original}" WITH "${r.replacement}" everywhere.`)
     .join('\n');
 
-  // Find the primary company name replacement (usually the first rule or generic)
   const mainBrand = config.replacements.length > 0 ? config.replacements[0].replacement : "Elift Solutions";
 
   const prompt = `
-    You are an expert technical writer re-authoring a manual for a new brand.
-    Your goal is to create a clean, professional Markdown document based on the attached PDF.
-
-    **CONFIGURATION:**
-    - Target Language: ${config.targetLanguage} (Translate everything).
-    - Tone: ${config.tone}.
+    You are a rigorous Technical Documentation Engine. 
     
-    **1. BRANDING & REPLACEMENTS:**
-    ${replacementInstructions}
-    - **HEADER:** Start the document section with a single line: "**Manufacturer: ${mainBrand}**".
-    - **BODY:** Do NOT mention the *original* manufacturer's name in the body text.
-
-    **2. CONTENT FILTRATION:**
-    - DELETE legal disclaimers, FCC warnings.
-    - KEEP technical instructions, safety warnings, specifications.
-
-    **3. INTELLIGENT TABLE STRUCTURE (CRITICAL):**
+    **TASK:** 
+    Convert this PDF page to structurally perfect Markdown in ${config.targetLanguage}.
     
-    **Type A: KEYPAD COMMANDS (Simple Lists)**
-    - IF the table lists simple button combinations (e.g., "0 1 ENTER" -> "Action"), use this EXACT 3-column structure:
-      | Príkaz | Popis | Poznámka |
-      | :--- | :--- | :--- |
-    - **Separate keys with spaces** (e.g., "1 0 0", "0 2 x x").
-    - Use '↵' for Enter.
-
-    **Type B: MENU STRUCTURES (Hierarchical Trees - The Problem Area)**
-    - IF the table shows a Menu Tree (e.g., "1. Menu level", "2. Menu level"...), **DO NOT squash it into 3 columns.**
-    - **REPLICATE THE COLUMNS EXACTLY.** If the PDF has 5 columns (Level 1, Level 2, Level 3, Level 4, Description), you MUST create a 5-column Markdown table.
-    - **Structure:**
-      | Úroveň 1 | Úroveň 2 | Úroveň 3 | Úroveň 4 | Popis |
-      | :--- | :--- | :--- | :--- | :--- |
-    - **IMPORTANT:** Keep parent cells EMPTY if they are empty in the PDF. Do not merge text across rows inappropriately. The visual hierarchy relies on empty cells.
-
-    **Type C: PINOUTS / WIRING**
-    - Convert distinct tables to Markdown Tables.
-
-    **4. FORMATTING RULES:**
-    - **HEADINGS:** Use H1 (#) for Main Title, H2 (##) for Chapters.
-    - **VISUALS:** Use \`> **[FOTO: Detailed description]**\` only for complex photos.
+    **CRITICAL ALIGNMENT RULES (DO NOT IGNORE):**
+    1. **MENU TABLES (> [!MENU]):** 
+       - MUST have exactly **4 COLUMNS**: \`| Level 1 | Level 2 | Level 3 | Description |\`.
+       - **NEVER** merge columns. If a menu item is at Level 2, Level 1 MUST be an empty cell \`| |\`.
+       - **BAD:** \`| Settings | Time |\` (Only 2 cols -> Broken alignment)
+       - **GOOD:** \`| | Settings | Time | |\` (4 cols -> Aligned)
     
-    **PROCESS:**
-    1. Analyze the table type (Keypad Command vs. Menu Structure).
-    2. Choose the correct column layout (3 columns vs. Multi-column).
-    3. Translate and Format.
+    2. **KEYPAD TABLES (> [!KEYPAD]):**
+       - MUST have exactly **3 COLUMNS**: \`| Input | Function | Note |\`.
+       
+    3. **GENERAL TABLES:**
+       - Ensure every row has the same number of cells as the header.
+       - Do not wrap text onto new lines within the markdown source.
+
+    **BRANDING:**
+    - Manufacturer: "**${mainBrand}**".
+    - ${replacementInstructions}
+
+    **MARKDOWN SYNTAX:**
+    - Use \`> [!MENU]\` wrapper for Menu trees.
+    - Use \`> [!KEYPAD]\` wrapper for Button/Code lists.
+    - Use \`> [!WARNING]\` for safety alerts.
+    - Use \`> **[FOTO: description]**\` for images.
 
     **OUTPUT:**
-    Return ONLY the Markdown string. No chat interaction.
+    Raw Markdown only.
   `;
 
-  // Use a model recommended for basic text tasks
   const modelId = 'gemini-3-flash-preview';
 
   try {
@@ -109,7 +150,11 @@ export const generateManualFromPDF = async (
       }
     });
 
-    return response.text || "";
+    const rawMarkdown = response.text || "";
+    
+    // Apply the Fixer to repair any "ragged" tables from Gemini
+    return fixTableFormatting(rawMarkdown);
+
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     throw new Error(error.message || "Nepodarilo sa vygenerovať manuál.");
