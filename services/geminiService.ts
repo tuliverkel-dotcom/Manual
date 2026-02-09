@@ -20,70 +20,6 @@ export const fileToGenerativePart = async (file: File): Promise<{ inlineData: { 
   });
 };
 
-/**
- * STRICT TABLE FIXER
- * Scans markdown, identifies tables, determines required column count from the header separator,
- * and forces every row to have that many cells by appending empty ones.
- */
-const fixTableFormatting = (markdown: string): string => {
-  const lines = markdown.split('\n');
-  const processedLines: string[] = [];
-  
-  let inTable = false;
-  let expectedPipes = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-
-    // 1. Detect Header Separator (e.g., |---|---|)
-    if (line.match(/^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/)) {
-      inTable = true;
-      // Count pipes to determine columns. Standard md table row: | A | B | -> 3 pipes for 2 cols (if enclosed)
-      // Robust way: split by pipe, filter empty strings if it starts/ends with pipe
-      expectedPipes = (line.match(/\|/g) || []).length;
-      processedLines.push(line);
-      continue;
-    }
-
-    // 2. Process Table Rows
-    if (inTable) {
-      // Check if we are still in a table (line starts with pipe)
-      if (line.startsWith('|')) {
-        const currentPipes = (line.match(/\|/g) || []).length;
-        
-        if (currentPipes < expectedPipes) {
-          // Fix ragged row: Add missing cells
-          const missingPipes = expectedPipes - currentPipes;
-          let fixedLine = line;
-          
-          // If line ends with |, we need to add " |" N times.
-          // If it doesn't end with |, we need to add " |" N+1 times to close it + add cols.
-          // Assuming standard "enclosed" tables from LLM.
-          
-          if (fixedLine.endsWith('|')) {
-             fixedLine += " |".repeat(missingPipes);
-          } else {
-             fixedLine += " |".repeat(missingPipes + 1);
-          }
-          processedLines.push(fixedLine);
-        } else {
-          processedLines.push(line);
-        }
-      } else {
-        // End of table
-        inTable = false;
-        expectedPipes = 0;
-        processedLines.push(lines[i]); // Push original line
-      }
-    } else {
-      // Normal text
-      processedLines.push(lines[i]);
-    }
-  }
-
-  return processedLines.join('\n');
-};
-
 export const generateManualFromPDF = async (
   file: File,
   config: ManualConfig
@@ -103,38 +39,62 @@ export const generateManualFromPDF = async (
 
   const mainBrand = config.replacements.length > 0 ? config.replacements[0].replacement : "Elift Solutions";
 
+  // PROMPT UPDATE: Added json:image instructions
   const prompt = `
-    You are a rigorous Technical Documentation Engine. 
+    You are a Technical Documentation Expert.
     
     **TASK:** 
-    Convert this PDF page to structurally perfect Markdown in ${config.targetLanguage}.
+    Extract technical content and convert it into **STRUCTURED MARKDOWN**.
     
-    **CRITICAL ALIGNMENT RULES (DO NOT IGNORE):**
-    1. **MENU TABLES (> [!MENU]):** 
-       - MUST have exactly **4 COLUMNS**: \`| Level 1 | Level 2 | Level 3 | Description |\`.
-       - **NEVER** merge columns. If a menu item is at Level 2, Level 1 MUST be an empty cell \`| |\`.
-       - **BAD:** \`| Settings | Time |\` (Only 2 cols -> Broken alignment)
-       - **GOOD:** \`| | Settings | Time | |\` (4 cols -> Aligned)
-    
-    2. **KEYPAD TABLES (> [!KEYPAD]):**
-       - MUST have exactly **3 COLUMNS**: \`| Input | Function | Note |\`.
-       
-    3. **GENERAL TABLES:**
-       - Ensure every row has the same number of cells as the header.
-       - Do not wrap text onto new lines within the markdown source.
+    **🚫 STRICT EXCLUSION RULES (DELETE THESE):**
+    1. **LEGAL:** Remove copyright (©), "All rights reserved", disclaimers, addresses, fax, emails, websites in footers.
+    2. **METADATA:** Remove document IDs, revision dates, "Original Instructions".
+    3. **Start directly with the content.**
 
-    **BRANDING:**
-    - Manufacturer: "**${mainBrand}**".
+    **✅ DATA BLOCK RULES (USE JSON FOR ALL STRUCTURED DATA):**
+    
+    1. **TABLE OF CONTENTS:**
+       Output as a code block with language \`json:toc\`. 
+       Format: Array of objects with \`chapter\` (string) and \`page\` (number/string).
+
+    2. **MENU / LCD STRUCTURES:**
+       Output as a code block with language \`json:menu\`.
+       Format: Array of objects. \`path\` is an array of strings. \`description\` is optional.
+
+    3. **KEYPAD / COMMANDS:**
+       Output as a code block with language \`json:keypad\`.
+       Format: Array of objects with \`inputs\` (string), \`function\` (string), \`note\` (string).
+
+    4. **DATA TABLES:**
+       Output as a code block with language \`json:table\`.
+       Format: JSON Object with "headers" (array of strings) and "rows" (array of arrays of strings).
+
+    5. **IMAGES / FIGURES:**
+       **DO NOT USE** standard markdown images like \`![alt](...)\`.
+       Output as a code block with language \`json:image\`.
+       Format: JSON Object.
+       Properties: 
+         - \`caption\`: The text label (e.g., "Obr. 1: Schéma zapojenia").
+         - \`description\`: A visual description of what should be in the image.
+         - \`type\`: "diagram" or "photo" or "icon".
+       Example:
+       \`\`\`json:image
+       {
+         "caption": "Obr. 2: Hlavná riadiaca doska",
+         "description": "Pohľad zhora na PCB dosku s konektormi X1 a X2",
+         "type": "photo"
+       }
+       \`\`\`
+
+    **CONTENT INSTRUCTIONS:**
+    - Manufacturer Name: "**${mainBrand}**".
     - ${replacementInstructions}
-
-    **MARKDOWN SYNTAX:**
-    - Use \`> [!MENU]\` wrapper for Menu trees.
-    - Use \`> [!KEYPAD]\` wrapper for Button/Code lists.
-    - Use \`> [!WARNING]\` for safety alerts.
-    - Use \`> **[FOTO: description]**\` for images.
+    - Translate to ${config.targetLanguage}.
+    - Warnings: Use \`> [!WARNING] Text\`
+    - Notes: Use \`> [!NOTE] Text\`
 
     **OUTPUT:**
-    Raw Markdown only.
+    Return the raw Markdown. Ensure JSON blocks are valid JSON.
   `;
 
   const modelId = 'gemini-3-flash-preview';
@@ -150,10 +110,7 @@ export const generateManualFromPDF = async (
       }
     });
 
-    const rawMarkdown = response.text || "";
-    
-    // Apply the Fixer to repair any "ragged" tables from Gemini
-    return fixTableFormatting(rawMarkdown);
+    return response.text || "";
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);

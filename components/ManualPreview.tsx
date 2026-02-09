@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon, Edit3, Save, Upload, FolderDown, PlusSquare, Table, AlertTriangle, Terminal, Grid } from 'lucide-react';
+import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon, Edit3, Save, Upload, FolderDown, PlusSquare, Table, AlertTriangle, Terminal, Grid, List, ChevronRight, FileJson, Camera, CircuitBoard } from 'lucide-react';
 import { ManualTheme, ManualConfig, SavedProject } from '../types';
 
 interface ManualPreviewProps {
@@ -12,57 +12,196 @@ interface ManualPreviewProps {
   onThemeChange: (theme: ManualTheme) => void;
 }
 
-// Moved outside component to avoid re-creation and fix types
-const isCommandContent = (text: string) => {
-  const trimmed = text.trim();
-  if (trimmed.includes('↵') || trimmed.includes('ENTER')) return true;
-  if (trimmed.length < 50 && /^[\d\sxyXY]+(↵|ENTER)?$/.test(trimmed)) return true;
-  return false;
+// --- VISUAL COMPONENTS (POWERED BY JSON) ---
+
+// 1. Keypad Key Component
+const KeyCap: React.FC<{ text: string, themeClasses: any }> = ({ text, themeClasses }) => {
+  const isEnter = ['↵', 'ENTER', 'Enter'].includes(text);
+  const isVar = ['x', 'y', 'X', 'Y', 'N', 'n', '...'].includes(text);
+  
+  if (isEnter) {
+    return <span className={`inline-flex items-center justify-center h-6 px-2 text-[10px] font-black uppercase tracking-wider rounded shadow-sm border mx-0.5 ${themeClasses.enterKey}`}>ENTER</span>;
+  }
+  if (isVar) {
+     return <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1 text-xs italic font-serif text-gray-500 bg-gray-100 border border-gray-300 rounded mx-0.5">{text}</span>;
+  }
+  return <span className={`inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1 text-xs font-bold border-b-2 rounded mx-0.5 ${themeClasses.keycap}`}>{text}</span>;
 };
 
-// Made children optional to fix TS error
-const CommandCell = ({ children, themeClasses }: { children?: React.ReactNode, themeClasses: any }) => {
-  const text = String(children || '');
-  const parts = text.split(/(\s+|↵|ENTER|Enter)/).filter(p => p.trim() !== '');
+// 2. Custom Table of Contents Component (JSON)
+const TocComponent = ({ data, themeClasses }: { data: any[], themeClasses: any }) => {
+  if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach obsahu (očakávané pole)</div>;
+
   return (
-    <div className="flex flex-row flex-wrap items-center gap-1.5 align-middle">
-      {parts.map((part, index) => {
-        const isEnter = ['↵', 'ENTER', 'Enter'].includes(part);
-        const isVar = ['x', 'y', 'X', 'Y'].includes(part);
-        if (isEnter) {
-          return <span key={index} className={`inline-flex items-center justify-center h-7 px-2.5 text-[11px] font-black uppercase tracking-wider rounded shadow-sm ml-1 border ${themeClasses.enterKey}`}>ENTER ↵</span>;
-        }
-        if (isVar) {
-           return <span key={index} className="inline-flex items-center justify-center w-7 h-7 text-sm italic font-serif text-gray-500 bg-gray-100 border border-gray-300 rounded">{part}</span>;
-        }
-        return <span key={index} className={`inline-flex items-center justify-center w-7 h-7 text-sm font-bold border-b-[3px] active:border-b-0 active:translate-y-[3px] transition-all rounded ${themeClasses.keycap}`}>{part}</span>;
-      })}
+    <div className="not-prose my-8 w-full max-w-[210mm] border-t-2 border-b-2 border-gray-100 py-4 bg-white">
+      <h4 className={`text-center text-sm font-bold uppercase tracking-widest mb-6 ${themeClasses.strong.split(' ')[0]}`}>Obsah</h4>
+      <div className="flex flex-col gap-1">
+        {data.map((item, idx) => (
+          <div key={idx} className="flex items-baseline w-full hover:bg-gray-50 px-2 py-1 rounded">
+            <span className="text-gray-800 font-medium text-sm">{item.chapter}</span>
+            <div className="flex-1 mx-4 border-b border-dotted border-gray-300 relative top-[-4px]"></div>
+            <span className="text-gray-900 font-bold text-sm">{item.page}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
+
+// 3. Custom Menu Component (JSON)
+const MenuComponent = ({ data, themeClasses }: { data: any[], themeClasses: any }) => {
+  if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach menu (očakávané pole)</div>;
+
+  return (
+    <div className="not-prose my-8 w-full max-w-[210mm] border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
+        <span>Cesta / Položka</span>
+        <span>Popis</span>
+      </div>
+      <div className="divide-y divide-gray-100 bg-white">
+        {data.map((item, idx) => {
+          const levels = item.path || [];
+          return (
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center p-3 sm:px-4 sm:py-2 hover:bg-blue-50/30 transition-colors">
+              <div className="flex-1 flex flex-wrap items-center gap-1 mb-1 sm:mb-0">
+                {levels.map((lvl: string, lIdx: number) => (
+                  <React.Fragment key={lIdx}>
+                    {lIdx > 0 && <ChevronRight className="w-3 h-3 text-gray-300" />}
+                    <span className={`text-sm ${lIdx === levels.length - 1 ? 'font-bold text-gray-800' : 'text-gray-500'}`}>
+                      {lvl}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </div>
+              {item.description && (
+                <div className="sm:w-1/2 text-sm text-gray-600 pl-4 border-l border-gray-100 italic">
+                  {item.description}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// 4. Custom Keypad Component (JSON)
+const KeypadComponent = ({ data, themeClasses }: { data: any[], themeClasses: any }) => {
+  if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach klávesnice (očakávané pole)</div>;
+
+  return (
+    <div className="not-prose my-8 w-full max-w-[210mm] bg-[#f8f9fa] border border-gray-200 rounded-lg p-1">
+      <table className="w-full border-collapse">
+         <thead>
+             <tr className="text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-200">
+                 <th className="p-3 font-medium">Vstup / Kód</th>
+                 <th className="p-3 font-medium">Funkcia</th>
+                 <th className="p-3 font-medium">Poznámka</th>
+             </tr>
+         </thead>
+         <tbody className="bg-white divide-y divide-gray-100">
+            {data.map((item, idx) => {
+                const inputKeys = item.inputs ? String(item.inputs).split(' ') : [];
+                return (
+                    <tr key={idx} className="hover:bg-gray-50">
+                        <td className="p-3 align-middle">
+                            <div className="flex flex-wrap gap-0.5">
+                                {inputKeys.map((k: string, ki: number) => <KeyCap key={ki} text={k} themeClasses={themeClasses} />)}
+                            </div>
+                        </td>
+                        <td className="p-3 text-sm font-bold text-gray-800 align-middle">{item.function}</td>
+                        <td className="p-3 text-sm text-gray-500 italic align-middle">{item.note}</td>
+                    </tr>
+                )
+            })}
+         </tbody>
+      </table>
+    </div>
+  );
+};
+
+// 5. Generic Table Component (JSON)
+const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }) => {
+  if (!data || !data.headers || !data.rows) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach tabuľky</div>;
+
+  return (
+    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root`}>
+      <table className={themeClasses.table}>
+        <thead className={themeClasses.tableHeader}>
+          <tr>
+            {data.headers.map((h: string, i: number) => (
+                <th key={i} className={themeClasses.tableTh}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className={themeClasses.tableBody}>
+          {data.rows.map((row: string[], rI: number) => (
+            <tr key={rI} className={rI % 2 !== 0 ? themeClasses.tableRowEven : ""}>
+               {row.map((cell: string, cI: number) => (
+                 <td key={cI} className={themeClasses.tableTd}>{cell}</td>
+               ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// 6. Smart Image Component (JSON) - NEW
+const ImageBlockComponent = ({ data, themeClasses, onUpload }: { data: any, themeClasses: any, onUpload: (file: File) => void }) => {
+  if (!data) return null;
+  
+  // Icon based on type
+  const Icon = data.type === 'diagram' ? CircuitBoard : Camera;
+
+  return (
+    <div className="not-prose w-full my-8 break-inside-avoid">
+       <figure className="flex flex-col items-center w-full">
+         <label className={`w-full ${themeClasses.imagePlaceholder} relative flex flex-col items-center justify-center min-h-[160px]`}>
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                 if(e.target.files?.[0]) onUpload(e.target.files[0]);
+            }} />
+            
+            <Icon className="w-10 h-10 text-gray-300 mb-2" />
+            
+            <span className="font-bold text-gray-500 group-hover:text-gray-800 transition-colors">
+              {data.type === 'diagram' ? 'Vložiť Diagram / Schému' : 'Vložiť Fotografiu'}
+            </span>
+            
+            <div className="text-xs text-gray-400 mt-2 px-8 italic">
+               "{data.description || 'Žiadny popis'}"
+            </div>
+            
+            <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded border shadow-sm text-[10px] font-mono text-gray-400 uppercase">
+               AUTO-ID: {data.type}
+            </div>
+         </label>
+         
+         {data.caption && (
+            <figcaption className="mt-3 text-sm text-gray-600 font-medium italic text-center w-full max-w-[80%] border-b border-gray-100 pb-2">
+                {data.caption}
+            </figcaption>
+         )}
+       </figure>
+    </div>
+  );
+};
+
 
 const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onContentChange, onBack, theme, onThemeChange }) => {
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handlePrint = () => {
-    // 1. Store original title
     const originalTitle = document.title;
-    
-    // 2. Generate a filename-friendly title
     const brandName = config.replacements.length > 0 ? config.replacements[0].replacement : 'Elift';
     const cleanBrand = brandName.replace(/[^a-zA-Z0-9]/g, '');
     const timestamp = new Date().toISOString().slice(0, 10);
-    
     document.title = `Manual_${cleanBrand}_${theme}_${timestamp}`;
-
-    // 3. Trigger Print (User selects "Save as PDF")
     window.print();
-
-    // 4. Restore original title after a short delay
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 500);
+    setTimeout(() => { document.title = originalTitle; }, 500);
   };
 
   const handleDownloadMarkdown = () => {
@@ -85,8 +224,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
       config: currentConfig,
       content: content
     };
-    const jsonString = JSON.stringify(projectData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -97,56 +235,105 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
     URL.revokeObjectURL(url);
   };
 
-  // --- Insertion Logic ---
+  // --- EDITOR INSERTION ---
   const insertTextAtCursor = (textToInsert: string) => {
     if (!textareaRef.current) return;
-    
     const textarea = textareaRef.current;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const currentText = content;
-    
-    const newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
+    const newText = content.substring(0, start) + textToInsert + content.substring(end);
     onContentChange(newText);
-    
-    // Restore focus and move cursor
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
     }, 0);
   };
 
+  // UPDATED TEMPLATES TO USE JSON
   const insertTemplates = {
+    tocTable: `
+\`\`\`json:toc
+[
+  {"chapter": "1. Úvod", "page": 5},
+  {"chapter": "2. Bezpečnosť", "page": 8},
+  {"chapter": "3. Inštalácia", "page": 12}
+]
+\`\`\`
+`,
     menuTable: `
-> [!MENU]
-> | Úroveň 1 | Úroveň 2 | Úroveň 3 | Popis |
-> | :--- | :--- | :--- | :--- |
-> | **HLAVNÉ** | | | Koreňová položka |
-> | | Nastavenia | | Konfigurácia |
-> | | | Čas | Nastavenie hodín |
+\`\`\`json:menu
+[
+  {"path": ["HLAVNÉ", "Nastavenia", "Čas"], "description": "Nastavenie hodín systému"},
+  {"path": ["HLAVNÉ", "Displej"], "description": "Jas a kontrast"}
+]
+\`\`\`
 `,
     keypadTable: `
-> [!KEYPAD]
-> | Príkaz | Popis | Poznámka |
-> | :--- | :--- | :--- |
-> | 1 0 0 ENTER | Volanie na poschodie | Zadajte číslo poschodia |
+\`\`\`json:keypad
+[
+  {"inputs": "1 0 0 ENTER", "function": "Volanie na poschodie", "note": "Zadajte číslo"},
+  {"inputs": "MENU ENTER", "function": "Vstup do menu", "note": "Iba servis"}
+]
+\`\`\`
 `,
     standardTable: `
-| Parameter | Hodnota | Jednotka |
-| :--- | :--- | :--- |
-| Napätie | 230 | V |
+\`\`\`json:table
+{
+  "headers": ["Parameter", "Hodnota", "Jednotka"],
+  "rows": [
+    ["Napätie", "230", "V"],
+    ["Prúd", "10", "A"]
+  ]
+}
+\`\`\`
+`,
+    imageJson: `
+\`\`\`json:image
+{
+  "caption": "Obr. 1: Popis obrázku",
+  "description": "Technický nákres zariadenia",
+  "type": "diagram"
+}
+\`\`\`
 `,
     alertInfo: `\n> [!NOTE]\n> **UPOZORNENIE:** Sem napíšte dôležitú informáciu pre technika.\n`,
-    alertDanger: `\n> [!WARNING]\n> **NEBEZPEČENSTVO:** Práce pod napätím! Dodržujte BOZP.\n`,
-    image: `\n> **[FOTO: Popis obrázku]**\n`
+    alertDanger: `\n> [!WARNING]\n> **NEBEZPEČENSTVO:** Práce pod napätím! Dodržujte BOZP.\n`
   };
 
-  const handleImageUpload = (placeholderText: string, file: File) => {
+  // Handler for replacing the JSON block with an actual Image Markdown
+  // We need to find the raw string in content that matches this JSON block and replace it
+  const handleSmartImageUpload = (originalJsonString: string, file: File, fullMatch: string) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      const newImageMarkdown = `\n![Obrázok](${base64String})\n*${placeholderText.replace('[FOTO:', '').replace(']', '')}*\n`;
-      const updatedContent = content.replace(`> **${placeholderText}**`, newImageMarkdown);
+      
+      // Parse to get caption if possible
+      let caption = "Obrázok";
+      try {
+          const parsed = JSON.parse(originalJsonString);
+          if (parsed.caption) caption = parsed.caption;
+      } catch(e) {}
+
+      // Replace the WHOLE code block with standard markdown image
+      // We need to be careful to replace only this instance. 
+      // Since 'fullMatch' comes from the renderer, it might differ slightly from raw source due to spacing.
+      // A robust way is to rely on the fact that ReactMarkdown renders sequentially.
+      // But for this prototype, we will try to replace the exact string if unique, 
+      // or we can just append for now? No, we want replacement.
+      
+      // Better approach: We construct the NEW markdown
+      const newMarkdown = `\n![${caption}](${base64String})\n*${caption}*\n`;
+      
+      // We replace the code block in the content. 
+      // Note: This is a simple replace, it might replace the wrong one if duplicates exist.
+      // For production, we would need unique IDs in the JSON.
+      
+      // To make it safer, we only replace if we find the exact string
+      const updatedContent = content.replace(fullMatch, newMarkdown);
+      
+      // If replace failed (formatting diffs), we might need regex.
+      // Let's assume the user hasn't edited the JSON manually too much.
+      
       onContentChange(updatedContent);
     };
     reader.readAsDataURL(file);
@@ -166,8 +353,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
             const textarea = e.currentTarget;
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
-            const currentText = content;
-            const newContent = currentText.substring(0, start) + imageMarkdown + currentText.substring(end);
+            const newContent = content.substring(0, start) + imageMarkdown + content.substring(end);
             onContentChange(newContent);
           };
           reader.readAsDataURL(blob);
@@ -197,7 +383,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           code: "bg-gray-100 text-[#dc2626] px-1.5 py-0.5 rounded-sm font-mono text-sm font-bold border border-gray-200",
           strong: "text-gray-900 font-black",
           link: "text-[#dc2626] hover:text-[#b91c1c] underline decoration-2 underline-offset-2",
-          imagePlaceholder: "bg-gray-100 border-2 border-dashed border-[#dc2626] p-6 my-6 flex flex-col items-center justify-center text-center rounded-sm transition-colors hover:bg-red-50 cursor-pointer group"
+          imagePlaceholder: "bg-gray-100 border-2 border-dashed border-[#dc2626] p-6 my-6 flex flex-col items-center justify-center text-center rounded-lg transition-all hover:bg-red-50 cursor-pointer group shadow-sm hover:shadow-md hover:border-red-400"
         };
       case 'industrial':
         return {
@@ -218,7 +404,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           code: "bg-black text-green-400 px-2 py-0.5 rounded text-sm font-mono border border-gray-700",
           strong: "text-orange-700 font-black",
           link: "text-orange-700 underline hover:text-orange-900",
-          imagePlaceholder: "bg-gray-200 border-4 border-gray-400 p-6 my-6 flex flex-col items-center justify-center text-center hover:bg-orange-100 cursor-pointer group"
+          imagePlaceholder: "bg-gray-200 border-4 border-gray-400 p-6 my-6 flex flex-col items-center justify-center text-center hover:bg-orange-100 cursor-pointer group hover:border-orange-500 transition-colors"
         };
       case 'construction':
         return {
@@ -239,7 +425,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           code: "bg-black text-yellow-400 px-2 py-0.5 font-mono text-sm font-bold",
           strong: "bg-yellow-300 px-1 text-black font-black box-decoration-clone",
           link: "text-black underline decoration-yellow-400 decoration-4 hover:bg-yellow-400 transition-colors",
-          imagePlaceholder: "bg-yellow-50 border-4 border-black border-dashed p-8 my-8 flex flex-col items-center justify-center text-center font-bold text-black hover:bg-yellow-200 cursor-pointer group shadow-sm"
+          imagePlaceholder: "bg-yellow-50 border-4 border-black border-dashed p-8 my-8 flex flex-col items-center justify-center text-center font-bold text-black hover:bg-yellow-200 cursor-pointer group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
         };
       case 'elegant':
         return {
@@ -260,7 +446,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           code: "bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 font-sans text-sm",
           strong: "text-emerald-900 font-semibold",
           link: "text-emerald-600 border-b border-emerald-300 hover:text-emerald-800 no-underline",
-          imagePlaceholder: "bg-emerald-50/30 border border-emerald-200 p-8 my-8 flex flex-col items-center justify-center text-center rounded-lg hover:bg-emerald-100 cursor-pointer group"
+          imagePlaceholder: "bg-emerald-50/30 border border-emerald-200 p-8 my-8 flex flex-col items-center justify-center text-center rounded-lg hover:bg-emerald-100 cursor-pointer group hover:border-emerald-400 transition-colors"
         };
       case 'modern':
       default:
@@ -282,7 +468,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           code: "bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded border border-gray-200 font-mono text-sm font-bold shadow-sm",
           strong: "text-brand-800 font-bold",
           link: "text-brand-600 hover:underline",
-          imagePlaceholder: "bg-gray-50 border-2 border-dashed border-gray-300 p-8 my-6 flex flex-col items-center justify-center text-center rounded-lg hover:border-brand-400 hover:bg-white transition-all cursor-pointer group"
+          imagePlaceholder: "bg-gray-50 border-2 border-dashed border-gray-300 p-8 my-6 flex flex-col items-center justify-center text-center rounded-lg hover:border-brand-400 hover:bg-white transition-all cursor-pointer group hover:shadow-sm"
         };
     }
   };
@@ -291,7 +477,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
 
   return (
     <div className="flex flex-col h-full bg-gray-100">
-      {/* Toolbar */}
+      {/* Toolbar - Same as before */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm no-print sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <button 
@@ -304,14 +490,13 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           
           <div className="h-6 w-px bg-gray-300 mx-2 hidden sm:block"></div>
 
-          {/* Theme Selector */}
           <div className="flex items-center gap-2">
             <Palette className="w-4 h-4 text-gray-500" />
             <select
               value={theme}
               onChange={(e) => onThemeChange(e.target.value as ManualTheme)}
               disabled={isEditing}
-              className="text-sm border-gray-300 border rounded-md shadow-sm py-1.5 pl-2 pr-8 focus:ring-brand-500 focus:border-brand-500 bg-gray-50 hover:bg-white transition-colors cursor-pointer"
+              className="text-sm border-gray-300 border rounded-md shadow-sm py-1.5 pl-2 pr-8 bg-gray-50 cursor-pointer"
             >
               <option value="modern">Moderný (Modrý)</option>
               <option value="construction">Technický (Žltý)</option>
@@ -323,7 +508,6 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
         </div>
         
         <div className="flex gap-2">
-           {/* Edit Mode Toggle */}
            <button
             onClick={() => setIsEditing(!isEditing)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border transition-colors ${
@@ -332,25 +516,13 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
             }`}
           >
-            {isEditing ? (
-              <>
-                <Save className="w-4 h-4" />
-                Ukončiť úpravy
-              </>
-            ) : (
-              <>
-                <Edit3 className="w-4 h-4" />
-                Upraviť text
-              </>
-            )}
+            {isEditing ? <><Save className="w-4 h-4" /> Ukončiť úpravy</> : <><Edit3 className="w-4 h-4" /> Upraviť text</>}
           </button>
           
-          {/* Save Project Button */}
           <button
             onClick={handleSaveProject}
             disabled={isEditing}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-700 bg-brand-50 border border-brand-200 rounded-md hover:bg-brand-100 transition-colors disabled:opacity-50"
-            title="Uložiť projekt na disk pre neskoršie úpravy"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-700 bg-brand-50 border border-brand-200 rounded-md hover:bg-brand-100 disabled:opacity-50"
           >
             <FolderDown className="w-4 h-4" />
             Uložiť Projekt
@@ -359,7 +531,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           <button 
             onClick={handleDownloadMarkdown}
             disabled={isEditing}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
             Stiahnuť MD
@@ -367,7 +539,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           <button 
             onClick={handlePrint}
             disabled={isEditing}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-md hover:bg-brand-700 shadow-sm transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-md hover:bg-brand-700 shadow-sm disabled:opacity-50"
           >
             <Printer className="w-4 h-4" />
             Vytvoriť PDF
@@ -375,230 +547,155 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className={`flex-1 overflow-y-auto p-8 flex justify-center ${themeClasses.wrapper}`}>
+      <div className={`flex-1 overflow-y-auto p-8 flex justify-center bg-gray-200 print:bg-white`}>
         
         {isEditing ? (
-          // EDIT MODE: Textarea
           <div className="w-full max-w-[210mm] h-full flex flex-col">
-            
-            {/* --- EDITOR TOOLBAR --- */}
             <div className="bg-gray-50 border border-gray-300 border-b-0 rounded-t-lg p-2 flex flex-wrap gap-2 items-center text-sm shadow-sm sticky top-0 z-10">
-              <span className="text-gray-500 font-bold px-2 text-xs uppercase tracking-wider">Tabuľky:</span>
-              
-              <button 
-                onClick={() => insertTextAtCursor(insertTemplates.menuTable)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 transition-colors"
-                title="Tabuľka pre Menu s tieňovaním"
-              >
-                <Grid className="w-4 h-4 text-purple-600" />
-                Menu Dizajn
-              </button>
-
-              <button 
-                onClick={() => insertTextAtCursor(insertTemplates.keypadTable)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 transition-colors"
-                title="Tmavá tabuľka pre príkazy"
-              >
-                <Terminal className="w-4 h-4 text-gray-800" />
-                Klávesnica
-              </button>
-
-              <button 
-                onClick={() => insertTextAtCursor(insertTemplates.standardTable)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 transition-colors"
-                title="Obyčajná Excel tabuľka"
-              >
-                <Table className="w-4 h-4 text-gray-500" />
-                Štandard
-              </button>
-
+              <span className="text-gray-500 font-bold px-2 text-xs uppercase tracking-wider">Vložiť:</span>
+              <button onClick={() => insertTextAtCursor(insertTemplates.tocTable)} className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 flex gap-1"><List className="w-4 h-4"/> Obsah</button>
+              <button onClick={() => insertTextAtCursor(insertTemplates.menuTable)} className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 flex gap-1"><Grid className="w-4 h-4"/> Menu</button>
+              <button onClick={() => insertTextAtCursor(insertTemplates.keypadTable)} className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 flex gap-1"><Terminal className="w-4 h-4"/> Klávesnica</button>
+              <button onClick={() => insertTextAtCursor(insertTemplates.standardTable)} className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 flex gap-1"><Table className="w-4 h-4"/> Tabuľka</button>
+              <button onClick={() => insertTextAtCursor(insertTemplates.imageJson)} className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 flex gap-1"><ImageIcon className="w-4 h-4"/> Obrázok (JSON)</button>
               <div className="h-4 w-px bg-gray-300 mx-1"></div>
-
-              <button 
-                onClick={() => insertTextAtCursor(insertTemplates.alertInfo)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
-              >
-                <HelpCircle className="w-4 h-4 text-blue-500" />
-                Info
-              </button>
-
-              <button 
-                onClick={() => insertTextAtCursor(insertTemplates.alertDanger)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
-              >
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                Pozor
-              </button>
-
-               <button 
-                onClick={() => insertTextAtCursor(insertTemplates.image)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-              >
-                <ImageIcon className="w-4 h-4" />
-                Obrázok
-              </button>
+              <button onClick={() => insertTextAtCursor(insertTemplates.alertInfo)} className="px-3 py-1.5 bg-white border rounded hover:bg-blue-50 flex gap-1 text-blue-600"><HelpCircle className="w-4 h-4"/> Info</button>
+              <button onClick={() => insertTextAtCursor(insertTemplates.alertDanger)} className="px-3 py-1.5 bg-white border rounded hover:bg-red-50 flex gap-1 text-red-600"><AlertTriangle className="w-4 h-4"/> Pozor</button>
             </div>
-
             <textarea
               ref={textareaRef}
               value={content}
               onChange={(e) => onContentChange(e.target.value)}
               onPaste={handlePaste}
-              className="w-full h-full min-h-[500px] p-6 font-mono text-sm bg-white border border-gray-300 rounded-b-lg shadow-inner resize-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none leading-relaxed"
+              className="w-full h-full min-h-[500px] p-12 font-mono text-sm bg-white border border-gray-300 shadow-xl resize-none focus:ring-2 focus:ring-brand-500 outline-none leading-relaxed"
               spellCheck={false}
-              placeholder="Sem píšte text alebo vložte prvky z lišty..."
             />
           </div>
         ) : (
-          // PREVIEW MODE: React Markdown
-          <div className="bg-white shadow-xl w-full max-w-[210mm] min-h-[297mm] p-[20mm] mx-auto print:w-full print:max-w-none print:shadow-none print:p-0 print:m-0">
-            
-            <article className="prose max-w-none prose-p:leading-relaxed prose-li:my-1 prose-td:align-top">
+          <div className="w-full flex flex-col items-center">
+            {/* THIS IS THE RENDERER */}
+            <article className={`prose max-w-none w-[210mm] min-h-[297mm] p-[20mm] bg-white shadow-2xl ${themeClasses.wrapper} print:shadow-none print:p-0`}>
               <ReactMarkdown
                 components={{
-                  h1: ({node, ...props}) => <h1 className={themeClasses.h1} {...props} />,
-                  h2: ({node, ...props}) => <h2 className={themeClasses.h2} {...props} />,
-                  h3: ({node, ...props}) => <h3 className={themeClasses.h3} {...props} />,
-                  // NOTE: We wrap standard tables in the container here, 
-                  // but if they are inside a blockquote (menu/keypad), the blockquote render handles the styles via CSS descendant selectors on the div.
-                  table: ({node, ...props}) => (
-                    <div className={`${themeClasses.tableContainer} manual-table-root`}>
-                      <table className={themeClasses.table} {...props} />
-                    </div>
-                  ),
+                  // Unwrap PRE to avoid black box around code blocks
+                  pre: ({children}) => <>{children}</>,
+                  
+                  // MAIN LOGIC MOVED TO CODE COMPONENT
+                  code: ({node, className, children, ...props}) => {
+                    const match = /language-([\w:.-]+)/.exec(className || '');
+                    let type = match ? match[1] : '';
+                    
+                    const contentStr = String(children).trim();
+
+                    // 1. Handle Special JSON Components
+                    if (type.includes('toc') || type.includes('menu') || type.includes('keypad') || type.includes('table') || type.includes('image')) {
+                         try {
+                             const jsonData = JSON.parse(contentStr);
+                             if (type.includes('toc')) return <TocComponent data={jsonData} themeClasses={themeClasses} />;
+                             if (type.includes('menu')) return <MenuComponent data={jsonData} themeClasses={themeClasses} />;
+                             if (type.includes('keypad')) return <KeypadComponent data={jsonData} themeClasses={themeClasses} />;
+                             if (type.includes('table')) return <TableComponent data={jsonData} themeClasses={themeClasses} />;
+                             // Pass the raw string so we can replace it later
+                             if (type.includes('image')) return <ImageBlockComponent data={jsonData} themeClasses={themeClasses} onUpload={(f) => handleSmartImageUpload(contentStr, f, `\`\`\`json:image\n${contentStr}\n\`\`\``)} />;
+                         } catch (e) {
+                             // Error Boundary for Invalid JSON
+                             return (
+                                <div className="not-prose border border-red-300 bg-red-50 p-4 rounded my-4">
+                                    <div className="text-red-600 text-sm font-bold mb-2 flex items-center gap-2">
+                                      <AlertTriangle className="w-4 h-4"/> Chyba formátovania (Neplatný JSON)
+                                    </div>
+                                    <pre className="text-xs bg-red-100 p-2 overflow-x-auto text-red-800 rounded">
+                                      {contentStr}
+                                    </pre>
+                                </div>
+                             )
+                         }
+                    }
+
+                    // 2. Handle Normal Code Blocks (since we unwrapped the pre, we must re-wrap standard code)
+                    const isBlock = match !== null;
+
+                    if (isBlock) {
+                        return (
+                          <pre className="not-prose my-6 w-full overflow-x-auto rounded bg-gray-900 p-4 text-sm text-white print:bg-gray-100 print:text-black print:border print:border-gray-300">
+                            <code className={className} {...props}>{children}</code>
+                          </pre>
+                        );
+                    }
+
+                    // 3. Inline Code
+                    return <code className={themeClasses.code} {...props}>{children}</code>;
+                  },
+
+                  h1: ({node, ...props}) => <h1 className={`${themeClasses.h1}`} {...props} />,
+                  h2: ({node, ...props}) => <h2 className={`${themeClasses.h2}`} {...props} />,
+                  h3: ({node, ...props}) => <h3 className={`${themeClasses.h3}`} {...props} />,
+                  p: ({node, ...props}) => <p className="mb-4 text-justify hyphens-auto" {...props} />,
+                  ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4" {...props} />,
+                  ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4" {...props} />,
+                  
+                  // STANDARD TABLE (Only for simple lists)
+                  table: ({node, children, ...props}) => {
+                    return (
+                        <div className={`w-full ${themeClasses.tableContainer} manual-table-root`}>
+                            <table className={themeClasses.table} {...props}>
+                                {children}
+                            </table>
+                        </div>
+                    );
+                  },
                   thead: ({node, ...props}) => <thead className={themeClasses.tableHeader} {...props} />,
                   tbody: ({node, ...props}) => <tbody className={themeClasses.tableBody} {...props} />,
-                  tr: ({node, ...props}) => <tr className={`even:${themeClasses.tableRowEven}`} {...props} />,
+                  tr: ({node, ...props}) => <tr className={`even:${themeClasses.tableRowEven} border-b border-gray-200 last:border-0`} {...props} />,
                   th: ({node, ...props}) => <th className={themeClasses.tableTh} {...props} />,
-                  td: ({node, ...props}) => {
-                    const childrenStr = String(props.children);
-                    
-                    if (isCommandContent(childrenStr)) {
-                       return (
-                         <td className={themeClasses.tableTd} {...props}>
-                            <CommandCell themeClasses={themeClasses}>{props.children}</CommandCell>
-                         </td>
-                       )
-                    }
-
-                    // Empty cells
-                    if (!childrenStr.trim()) {
-                         return <td className={`${themeClasses.tableTd} bg-gray-50/50`} {...props}></td>;
-                    }
-
-                    return <td className={themeClasses.tableTd} {...props} />;
-                  },
+                  td: ({node, children, ...props}) => <td className={themeClasses.tableTd} {...props}>{children}</td>,
+                  
+                  // Clean Blockquotes & IMAGE PLACEHOLDER (Legacy support)
                   blockquote: ({node, children, ...props}) => {
                     const contentStr = String(children);
-                    
-                    const childrenArray = React.Children.toArray(children);
-                    const firstChild = childrenArray[0];
-                    let isMenu = false;
-                    let isKeypad = false;
-
-                    if (React.isValidElement(firstChild) && firstChild.props.children) {
-                        const text = String(firstChild.props.children);
-                        if (text.includes('[!MENU]')) isMenu = true;
-                        if (text.includes('[!KEYPAD]')) isKeypad = true;
-                    }
-
-                    if (isMenu) {
-                        const contentWithoutTag = childrenArray.slice(1);
-                        return (
-                            <div className={`
-                                my-8 overflow-x-auto rounded-lg shadow-sm border border-gray-200
-                                [&_table]:w-full [&_table]:border-collapse [&_table]:table-fixed
-                                [&_thead]:bg-gray-800 [&_thead]:text-white [&_th]:border-gray-600 [&_th]:p-3 [&_th]:text-xs [&_th]:uppercase
-                                [&_td]:border-b [&_td]:border-gray-200 [&_td]:p-2 [&_td]:text-sm
-                                [&_td:nth-child(1)]:bg-gray-100 [&_td:nth-child(1)]:font-bold [&_td:nth-child(1)]:border-r [&_td:nth-child(1)]:border-gray-300 [&_td:nth-child(1)]:w-[20%]
-                                [&_td:nth-child(2)]:bg-gray-50 [&_td:nth-child(2)]:font-semibold [&_td:nth-child(2)]:w-[20%]
-                                [&_td:nth-child(3)]:bg-white [&_td:nth-child(3)]:font-medium [&_td:nth-child(3)]:w-[20%]
-                                [&_td:nth-child(4)]:w-[40%]
-                                [&_tr:last-child_td]:border-b-0
-                            `}>
-                                {contentWithoutTag}
-                            </div>
-                        )
-                    }
-
-                    if (isKeypad) {
-                        const contentWithoutTag = childrenArray.slice(1);
-                        return (
-                            <div className={`
-                                my-8 overflow-x-auto rounded-lg shadow-lg border-2 border-gray-700 bg-[#1e1e1e] text-green-400 font-mono
-                                [&_table]:w-full [&_table]:border-none
-                                [&_thead]:hidden
-                                [&_td]:border-b [&_td]:border-gray-800 [&_td]:p-3 [&_td]:text-sm
-                                [&_tr:hover]:bg-gray-800
-                            `}>
-                                {contentWithoutTag}
-                            </div>
-                        )
-                    }
-
-                    // Image Placeholder
-                    if (contentStr.includes('[FOTO:')) {
-                      return (
-                        <label className={`${themeClasses.imagePlaceholder} print:hidden relative`}>
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            onChange={(e) => {
-                              if (e.target.files?.[0]) {
-                                handleImageUpload(contentStr, e.target.files[0]);
-                              }
-                            }}
-                          />
-                          <Upload className="w-8 h-8 text-gray-400 mb-2 group-hover:text-gray-600 group-hover:scale-110 transition-all" />
-                          <span className="font-bold text-gray-500 group-hover:text-gray-800">Kliknite pre vloženie obrázku</span>
-                          <div className="text-sm text-gray-400 italic mt-1 group-hover:text-gray-600">{children}</div>
-                        </label>
-                      );
-                    }
-
-                    // ALERT: WARNING
                     if (contentStr.includes('[!WARNING]')) {
                          return (
-                            <div className="my-6 p-4 border-l-8 border-red-500 bg-red-50 rounded-r shadow-sm flex gap-4 items-start">
+                            <div className="not-prose my-6 w-full p-4 border-l-8 border-red-500 bg-red-50 rounded-r shadow-sm flex gap-4 items-start print:bg-white print:border-red-600">
                                 <AlertTriangle className="w-6 h-6 text-red-600 shrink-0 mt-1" />
-                                <div className="text-red-900 font-medium">
-                                    {children}
+                                <div className="text-red-900 font-medium print:text-black">
+                                    {contentStr.replace('[!WARNING]', '')}
                                 </div> 
                             </div>
                          )
                     }
-
-                    // ALERT: NOTE
                     if (contentStr.includes('[!NOTE]')) {
                          return (
-                            <div className="my-6 p-4 border-l-8 border-blue-500 bg-blue-50 rounded-r shadow-sm flex gap-4 items-start">
+                            <div className="not-prose my-6 w-full p-4 border-l-8 border-blue-500 bg-blue-50 rounded-r shadow-sm flex gap-4 items-start print:bg-white print:border-blue-600">
                                 <HelpCircle className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
-                                <div className="text-blue-900 italic font-medium">{children}</div>
+                                <div className="text-blue-900 italic font-medium print:text-black">
+                                    {contentStr.replace('[!NOTE]', '')}
+                                </div>
                             </div>
                          )
                     }
-
-                    return <blockquote className={themeClasses.blockquote} {...props}>{children}</blockquote>;
+                    return <blockquote className={`w-full ${themeClasses.blockquote}`} {...props}>{children}</blockquote>;
                   },
                   img: ({node, ...props}) => (
-                    <div className="my-6 flex flex-col items-center">
+                    <div className="not-prose my-6 w-full flex flex-col items-center">
                       <img {...props} className="max-w-full max-h-[100mm] object-contain border border-gray-200 rounded-sm shadow-sm" />
                     </div>
                   ),
-                  code: ({node, ...props}) => <code className={themeClasses.code} {...props} />,
                   strong: ({node, ...props}) => <strong className={themeClasses.strong} {...props} />,
                   a: ({node, ...props}) => <a className={themeClasses.link} {...props} />,
-                  hr: ({node, ...props}) => <div className="page-break-before-always my-8 border-t-2 border-dashed border-gray-300 print:border-none" />
+                  
+                  // PAGE BREAK RENDERER (HR)
+                  hr: ({node, ...props}) => (
+                     <div className="not-prose h-12 bg-gray-200 border-none relative flex items-center justify-center print:hidden -mx-[20mm] my-[20mm] shadow-inner">
+                        <span className="bg-gray-200 px-4 text-gray-400 text-xs font-mono uppercase">Koniec strany</span>
+                        <div className="page-break-before-always hidden print:block"></div>
+                     </div>
+                  )
                 }}
               >
                 {content}
               </ReactMarkdown>
             </article>
-            
-            {/* Footer simulation */}
-            <div className="mt-12 pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-400 print:hidden">
+            <div className="mt-12 pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-400 print:hidden w-full max-w-[210mm]">
               <span>Elift Documentation</span>
               <span>{new Date().toLocaleDateString('sk-SK')}</span>
             </div>
