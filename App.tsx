@@ -7,18 +7,21 @@ import { generateManualFromPDF } from './services/geminiService';
 import { splitPdf } from './services/pdfHelpers';
 import { FileText, Sparkles, Scissors, FolderOpen } from 'lucide-react';
 
+// Define defaults outside component to use for resetting and merging
+const DEFAULT_CONFIG: ManualConfig = {
+  targetLanguage: 'Slovak',
+  tone: 'professional',
+  theme: 'modern',
+  replacements: [
+    { id: '1', original: 'intec', replacement: 'elift' },
+    { id: '2', original: 'mlc800', replacement: 'eliftecV2' },
+    { id: '3', original: 'Intec Corp', replacement: 'Elift Solutions' },
+  ],
+};
+
 const App: React.FC = () => {
   // Initial Configuration State
-  const [config, setConfig] = useState<ManualConfig>({
-    targetLanguage: 'Slovak',
-    tone: 'professional',
-    theme: 'modern', // Default theme
-    replacements: [
-      { id: '1', original: 'intec', replacement: 'elift' },
-      { id: '2', original: 'mlc800', replacement: 'eliftecV2' },
-      { id: '3', original: 'Intec Corp', replacement: 'Elift Solutions' },
-    ],
-  });
+  const [config, setConfig] = useState<ManualConfig>(DEFAULT_CONFIG);
 
   const [generationState, setGenerationState] = useState<GenerationState>({
     status: 'idle',
@@ -99,7 +102,15 @@ const App: React.FC = () => {
         const projectData: SavedProject = JSON.parse(jsonString);
 
         if (projectData.config && projectData.content) {
-          setConfig(projectData.config);
+          // SAFE MERGE:
+          // We take the DEFAULT_CONFIG (with all new fields if we add any in future)
+          // And overwrite it with saved data.
+          // This prevents the app from crashing if old save files miss new settings.
+          setConfig({
+            ...DEFAULT_CONFIG,
+            ...projectData.config
+          });
+          
           setGeneratedContent(projectData.content);
           setGenerationState({ status: 'completed' });
         } else {
