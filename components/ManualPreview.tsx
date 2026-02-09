@@ -149,7 +149,7 @@ const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }
   );
 };
 
-// 6. Smart Image Component (JSON) - NEW
+// 6. Smart Image Component (JSON)
 const ImageBlockComponent = ({ data, themeClasses, onUpload }: { data: any, themeClasses: any, onUpload: (file: File) => void }) => {
   if (!data) return null;
   
@@ -301,8 +301,8 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
   };
 
   // Handler for replacing the JSON block with an actual Image Markdown
-  // We need to find the raw string in content that matches this JSON block and replace it
-  const handleSmartImageUpload = (originalJsonString: string, file: File, fullMatch: string) => {
+  // IMPROVED: Uses Regex to find the block content regardless of spacing nuances
+  const handleSmartImageUpload = (originalJsonString: string, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
@@ -314,27 +314,26 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
           if (parsed.caption) caption = parsed.caption;
       } catch(e) {}
 
-      // Replace the WHOLE code block with standard markdown image
-      // We need to be careful to replace only this instance. 
-      // Since 'fullMatch' comes from the renderer, it might differ slightly from raw source due to spacing.
-      // A robust way is to rely on the fact that ReactMarkdown renders sequentially.
-      // But for this prototype, we will try to replace the exact string if unique, 
-      // or we can just append for now? No, we want replacement.
+      const newImageMarkdown = `\n![${caption}](${base64String})\n*${caption}*\n`;
       
-      // Better approach: We construct the NEW markdown
-      const newMarkdown = `\n![${caption}](${base64String})\n*${caption}*\n`;
+      // ROBUST REPLACEMENT LOGIC
+      // We search for ```json:image ... ``` blocks and check if their inner content matches the one we clicked
+      // This is safer than replacing "fullMatch" string which might vary in whitespace
+      const regex = /```json:image\s*([\s\S]*?)\s*```/g;
+      let match;
+      let newContent = content;
+
+      // Iterate matches to find the one with matching JSON content
+      while ((match = regex.exec(content)) !== null) {
+          if (match[1].trim() === originalJsonString.trim()) {
+               newContent = content.substring(0, match.index) + 
+                            newImageMarkdown + 
+                            content.substring(match.index + match[0].length);
+               break; // Stop after first match to avoid replacing duplicates if any (or we could continue)
+          }
+      }
       
-      // We replace the code block in the content. 
-      // Note: This is a simple replace, it might replace the wrong one if duplicates exist.
-      // For production, we would need unique IDs in the JSON.
-      
-      // To make it safer, we only replace if we find the exact string
-      const updatedContent = content.replace(fullMatch, newMarkdown);
-      
-      // If replace failed (formatting diffs), we might need regex.
-      // Let's assume the user hasn't edited the JSON manually too much.
-      
-      onContentChange(updatedContent);
+      onContentChange(newContent);
     };
     reader.readAsDataURL(file);
   };
@@ -596,7 +595,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                              if (type.includes('keypad')) return <KeypadComponent data={jsonData} themeClasses={themeClasses} />;
                              if (type.includes('table')) return <TableComponent data={jsonData} themeClasses={themeClasses} />;
                              // Pass the raw string so we can replace it later
-                             if (type.includes('image')) return <ImageBlockComponent data={jsonData} themeClasses={themeClasses} onUpload={(f) => handleSmartImageUpload(contentStr, f, `\`\`\`json:image\n${contentStr}\n\`\`\``)} />;
+                             if (type.includes('image')) return <ImageBlockComponent data={jsonData} themeClasses={themeClasses} onUpload={(f) => handleSmartImageUpload(contentStr, f)} />;
                          } catch (e) {
                              // Error Boundary for Invalid JSON
                              return (
