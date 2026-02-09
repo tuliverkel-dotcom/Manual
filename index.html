@@ -47,32 +47,120 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8; 
       }
+
+      /* PROFESSIONAL TABLE OF CONTENTS STYLES */
+      .toc-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.5rem;
+        align-items: end;
+        width: 100%;
+        margin-bottom: 0.5rem;
+      }
+      .toc-title {
+        font-weight: 500;
+        color: #111;
+        position: relative;
+        z-index: 1;
+        background: white;
+        padding-right: 4px;
+      }
+      .toc-dots {
+        border-bottom: 2px dotted #cbd5e1;
+        position: relative;
+        top: -5px;
+        opacity: 0.6;
+      }
+      .toc-page {
+        font-weight: 700;
+        color: #000;
+        background: white;
+        padding-left: 4px;
+      }
+
+      /* PROFESSIONAL PRINT STYLES */
       @media print {
         @page {
           size: A4;
-          margin: 0; /* Margins are handled by the container padding */
+          margin: 15mm 10mm 20mm 10mm; /* Bottom margin increased for footer */
         }
-        body {
+        
+        html, body {
           background-color: white;
+          width: 210mm;
+          height: 100%;
+          margin: 0 auto;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
+
         .no-print {
           display: none !important;
         }
-        .print-only {
-          display: block !important;
+
+        /* 1. Prevent breaking inside essential elements */
+        table, figure, img, pre, blockquote, .manual-table-root {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
         }
+        
+        /* 2. Keep headings attached to the text below them */
+        h1, h2, h3, h4, h5, h6 {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+          break-inside: avoid !important;
+        }
+
+        /* 3. General text readability rules */
+        p, ul, ol {
+          orphans: 3; /* Minimum lines at bottom of page */
+          widows: 3;  /* Minimum lines at top of page */
+        }
+
+        /* 4. Force Page Breaks */
+        .page-break-always {
+          break-before: always !important;
+          page-break-before: always !important;
+          display: block;
+          height: 0;
+          margin: 0;
+          border: none;
+        }
+
+        /* 5. Ensure tables have borders in print if theme requires */
+        tr {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        
+        /* 6. Fixed Print Footer */
+        .print-footer-container {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 10mm;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 2mm;
+          font-size: 9px;
+          color: #64748b;
+          background: white;
+          z-index: 9999;
+        }
+        
+        /* Fix Layout for Print */
         .prose {
           max-width: 100% !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          box-shadow: none !important;
         }
-        /* Ensure shadows/borders in themes (like Construction/Industrial) are visible */
-        * {
-            box-shadow: none !important; /* Standard shadows print poorly */
-        }
-        /* Exceptions for specific visual themes that rely on box-shadows for borders */
-        .shadow-\[8px_8px_0px_0px_rgba\(0\,0\,0\,1\)\] {
-           box-shadow: 8px 8px 0px 0px rgba(0,0,0,1) !important;
+        
+        #root {
+          display: block !important;
         }
       }
     </style>

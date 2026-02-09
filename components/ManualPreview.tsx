@@ -33,14 +33,14 @@ const TocComponent = ({ data, themeClasses }: { data: any[], themeClasses: any }
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach obsahu (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-8 w-full max-w-[210mm] border-t-2 border-b-2 border-gray-100 py-4 bg-white">
-      <h4 className={`text-center text-sm font-bold uppercase tracking-widest mb-6 ${themeClasses.strong.split(' ')[0]}`}>Obsah</h4>
-      <div className="flex flex-col gap-1">
+    <div className="not-prose my-10 w-full max-w-[210mm] break-inside-avoid page-break-inside-avoid">
+      <h4 className={`text-center text-lg font-black uppercase tracking-widest mb-8 border-b-2 border-gray-900 pb-2 ${themeClasses.strong.split(' ')[0]}`}>Obsah</h4>
+      <div className="flex flex-col gap-0.5 w-full">
         {data.map((item, idx) => (
-          <div key={idx} className="flex items-baseline w-full hover:bg-gray-50 px-2 py-1 rounded">
-            <span className="text-gray-800 font-medium text-sm">{item.chapter}</span>
-            <div className="flex-1 mx-4 border-b border-dotted border-gray-300 relative top-[-4px]"></div>
-            <span className="text-gray-900 font-bold text-sm">{item.page}</span>
+          <div key={idx} className="toc-row">
+            <span className="toc-title text-sm">{item.chapter}</span>
+            <span className="toc-dots"></span>
+            <span className="toc-page text-sm">{item.page}</span>
           </div>
         ))}
       </div>
@@ -53,7 +53,7 @@ const MenuComponent = ({ data, themeClasses }: { data: any[], themeClasses: any 
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach menu (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-8 w-full max-w-[210mm] border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+    <div className="not-prose my-8 w-full max-w-[210mm] border border-gray-200 rounded-lg overflow-hidden shadow-sm break-inside-avoid page-break-inside-avoid">
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
         <span>Cesta / Položka</span>
         <span>Popis</span>
@@ -91,7 +91,7 @@ const KeypadComponent = ({ data, themeClasses }: { data: any[], themeClasses: an
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach klávesnice (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-8 w-full max-w-[210mm] bg-[#f8f9fa] border border-gray-200 rounded-lg p-1">
+    <div className="not-prose my-8 w-full max-w-[210mm] bg-[#f8f9fa] border border-gray-200 rounded-lg p-1 break-inside-avoid page-break-inside-avoid">
       <table className="w-full border-collapse">
          <thead>
              <tr className="text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-200">
@@ -126,7 +126,7 @@ const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }
   if (!data || !data.headers || !data.rows) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach tabuľky</div>;
 
   return (
-    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root`}>
+    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root break-inside-avoid page-break-inside-avoid`}>
       <table className={themeClasses.table}>
         <thead className={themeClasses.tableHeader}>
           <tr>
@@ -157,7 +157,7 @@ const ImageBlockComponent = ({ data, themeClasses, onUpload }: { data: any, them
   const Icon = data.type === 'diagram' ? CircuitBoard : Camera;
 
   return (
-    <div className="not-prose w-full my-8 break-inside-avoid">
+    <div className="not-prose w-full my-8 break-inside-avoid page-break-inside-avoid">
        <figure className="flex flex-col items-center w-full">
          <label className={`w-full ${themeClasses.imagePlaceholder} relative flex flex-col items-center justify-center min-h-[160px]`}>
             <input type="file" accept="image/*" className="hidden" onChange={(e) => {
@@ -300,40 +300,86 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
     alertDanger: `\n> [!WARNING]\n> **NEBEZPEČENSTVO:** Práce pod napätím! Dodržujte BOZP.\n`
   };
 
+  // HELPER: Sort object keys recursively to ensure JSON equality checks work
+  // regardless of key order (e.g. {"a":1, "b":2} === {"b":2, "a":1})
+  const sortObj = (o: any): any => {
+    if (typeof o !== 'object' || o === null) return o;
+    if (Array.isArray(o)) return o.map(sortObj);
+    return Object.keys(o).sort().reduce((r: any, k) => {
+        r[k] = sortObj(o[k]);
+        return r;
+    }, {});
+  };
+
   // Handler for replacing the JSON block with an actual Image Markdown
-  // IMPROVED: Uses Regex to find the block content regardless of spacing nuances
-  const handleSmartImageUpload = (originalJsonString: string, file: File) => {
+  // IMPROVED: Uses Object comparison instead of String comparison
+  const handleSmartImageUpload = (originalRawContent: string, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
       
-      // Parse to get caption if possible
       let caption = "Obrázok";
+      let targetObj: any = null;
+
+      // 1. Try to parse the content we clicked on
       try {
-          const parsed = JSON.parse(originalJsonString);
-          if (parsed.caption) caption = parsed.caption;
-      } catch(e) {}
+          targetObj = JSON.parse(originalRawContent);
+          if (targetObj.caption) caption = targetObj.caption;
+      } catch(e) {
+          // If the clicked content isn't valid JSON, we will fall back to loose string matching
+          console.warn("Clicked content is not valid JSON, falling back to string match");
+      }
 
       const newImageMarkdown = `\n![${caption}](${base64String})\n*${caption}*\n`;
       
-      // ROBUST REPLACEMENT LOGIC
-      // We search for ```json:image ... ``` blocks and check if their inner content matches the one we clicked
-      // This is safer than replacing "fullMatch" string which might vary in whitespace
-      const regex = /```json:image\s*([\s\S]*?)\s*```/g;
+      // 2. Find all json:image blocks in the document
+      const regex = /```json:image([\s\S]*?)```/g;
+      
       let match;
       let newContent = content;
+      let found = false;
 
-      // Iterate matches to find the one with matching JSON content
       while ((match = regex.exec(content)) !== null) {
-          if (match[1].trim() === originalJsonString.trim()) {
-               newContent = content.substring(0, match.index) + 
-                            newImageMarkdown + 
-                            content.substring(match.index + match[0].length);
-               break; // Stop after first match to avoid replacing duplicates if any (or we could continue)
+          const fullBlockStr = match[0];
+          const innerJsonStr = match[1];
+          
+          let isMatch = false;
+
+          if (targetObj) {
+            // Compare as Objects (Robust)
+            try {
+                const blockObj = JSON.parse(innerJsonStr);
+                // Compare sorted stringified objects to ignore whitespace and key order
+                if (JSON.stringify(sortObj(blockObj)) === JSON.stringify(sortObj(targetObj))) {
+                    isMatch = true;
+                }
+            } catch (e) {
+                // Ignore invalid JSON blocks in content
+            }
+          } else {
+             // Compare as Strings (Fallback, ignore whitespace)
+             if (innerJsonStr.replace(/\s+/g, '').trim() === originalRawContent.replace(/\s+/g, '').trim()) {
+                 isMatch = true;
+             }
+          }
+
+          if (isMatch) {
+              const startIndex = match.index;
+              const endIndex = startIndex + fullBlockStr.length;
+
+              newContent = content.substring(0, startIndex) + 
+                           newImageMarkdown + 
+                           content.substring(endIndex);
+              found = true;
+              break; // Stop after first match
           }
       }
-      
-      onContentChange(newContent);
+
+      if (found) {
+        onContentChange(newContent);
+      } else {
+        alert("Nepodarilo sa nájsť tento blok v texte. Skúste prosím vymazať blok v editore a vložiť obrázok manuálne.");
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -366,9 +412,9 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
       case 'swiss':
         return {
           wrapper: "font-sans",
-          h1: "text-5xl font-black text-gray-900 tracking-tighter mb-8 pt-4 uppercase leading-none",
-          h2: "text-2xl font-bold text-gray-900 mt-12 mb-6 flex items-center gap-4 before:content-[''] before:block before:w-6 before:h-6 before:bg-[#dc2626]",
-          h3: "text-lg font-bold text-[#dc2626] mt-8 mb-4 uppercase tracking-widest border-b border-gray-200 pb-1",
+          h1: "text-5xl font-black text-gray-900 tracking-tighter mb-8 pt-4 uppercase leading-none break-after-avoid",
+          h2: "text-2xl font-bold text-gray-900 mt-12 mb-6 flex items-center gap-4 before:content-[''] before:block before:w-6 before:h-6 before:bg-[#dc2626] break-after-avoid",
+          h3: "text-lg font-bold text-[#dc2626] mt-8 mb-4 uppercase tracking-widest border-b border-gray-200 pb-1 break-after-avoid",
           tableContainer: "my-8 w-full border-t-4 border-[#dc2626] bg-white shadow-sm overflow-x-auto",
           table: "w-full border-collapse text-left",
           tableHeader: "bg-gray-100 text-[#dc2626] font-black text-xs uppercase tracking-widest border-b-2 border-[#dc2626]",
@@ -387,9 +433,9 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
       case 'industrial':
         return {
           wrapper: "font-mono bg-[#e5e5e5]",
-          h1: "text-3xl font-black text-gray-900 uppercase border-b-4 border-orange-600 pb-4 mb-8 tracking-tight",
-          h2: "text-2xl font-bold text-gray-900 border-l-[12px] border-orange-600 pl-4 uppercase tracking-wide mt-10 mb-6 bg-gray-200 py-2",
-          h3: "text-lg font-bold text-gray-800 mt-8 mb-4 underline decoration-orange-600 decoration-4 underline-offset-4",
+          h1: "text-3xl font-black text-gray-900 uppercase border-b-4 border-orange-600 pb-4 mb-8 tracking-tight break-after-avoid",
+          h2: "text-2xl font-bold text-gray-900 border-l-[12px] border-orange-600 pl-4 uppercase tracking-wide mt-10 mb-6 bg-gray-200 py-2 break-after-avoid",
+          h3: "text-lg font-bold text-gray-800 mt-8 mb-4 underline decoration-orange-600 decoration-4 underline-offset-4 break-after-avoid",
           tableContainer: "my-10 w-full bg-[#1a1a1a] border-4 border-gray-800 rounded-lg shadow-xl overflow-x-auto",
           table: "w-full border-collapse text-left text-gray-300",
           tableHeader: "bg-gray-900 text-orange-500 uppercase text-xs tracking-widest border-b border-gray-700",
@@ -408,9 +454,9 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
       case 'construction':
         return {
           wrapper: "font-sans",
-          h1: "text-4xl font-black text-black border-b-[8px] border-yellow-400 pb-2 mb-8 uppercase tracking-tighter",
-          h2: "text-2xl font-bold bg-black text-yellow-400 px-6 py-3 mt-12 mb-6 inline-block uppercase transform -skew-x-6 shadow-[8px_8px_0px_0px_rgba(250,204,21,1)]",
-          h3: "text-lg font-bold text-black mt-8 mb-4 border-l-[10px] border-yellow-400 pl-3 uppercase",
+          h1: "text-4xl font-black text-black border-b-[8px] border-yellow-400 pb-2 mb-8 uppercase tracking-tighter break-after-avoid",
+          h2: "text-2xl font-bold bg-black text-yellow-400 px-6 py-3 mt-12 mb-6 inline-block uppercase transform -skew-x-6 shadow-[8px_8px_0px_0px_rgba(250,204,21,1)] break-after-avoid",
+          h3: "text-lg font-bold text-black mt-8 mb-4 border-l-[10px] border-yellow-400 pl-3 uppercase break-after-avoid",
           tableContainer: "my-8 w-full border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white overflow-x-auto",
           table: "w-full border-collapse text-left",
           tableHeader: "bg-yellow-400 text-black font-black uppercase text-sm border-b-4 border-black",
@@ -429,9 +475,9 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
       case 'elegant':
         return {
           wrapper: "font-serif",
-          h1: "text-4xl font-normal text-emerald-900 border-b border-emerald-200 pb-4 mb-8 italic text-center",
-          h2: "text-2xl font-normal text-emerald-800 mt-10 mb-6 flex items-center gap-2",
-          h3: "text-xl font-medium text-emerald-700 mt-8 mb-4 italic",
+          h1: "text-4xl font-normal text-emerald-900 border-b border-emerald-200 pb-4 mb-8 italic text-center break-after-avoid",
+          h2: "text-2xl font-normal text-emerald-800 mt-10 mb-6 flex items-center gap-2 break-after-avoid",
+          h3: "text-xl font-medium text-emerald-700 mt-8 mb-4 italic break-after-avoid",
           tableContainer: "my-8 w-full border border-emerald-100 rounded-xl overflow-hidden shadow-lg bg-white overflow-x-auto",
           table: "w-full border-collapse text-left",
           tableHeader: "bg-emerald-50 text-emerald-900 font-medium tracking-wide border-b border-emerald-200",
@@ -451,9 +497,9 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
       default:
         return {
           wrapper: "font-sans",
-          h1: "text-3xl font-bold text-brand-900 border-b-2 border-brand-100 pb-2 mb-6",
-          h2: "text-2xl font-semibold text-brand-700 mt-10 mb-6 flex items-center",
-          h3: "text-lg font-semibold text-brand-600 mt-8 mb-4",
+          h1: "text-3xl font-bold text-brand-900 border-b-2 border-brand-100 pb-2 mb-6 break-after-avoid",
+          h2: "text-2xl font-semibold text-brand-700 mt-10 mb-6 flex items-center break-after-avoid",
+          h3: "text-lg font-semibold text-brand-600 mt-8 mb-4 break-after-avoid",
           tableContainer: "my-8 w-full border border-gray-200 rounded-lg overflow-hidden shadow-md bg-white ring-1 ring-gray-100 overflow-x-auto",
           table: "w-full border-collapse text-left",
           tableHeader: "bg-gray-50 text-brand-900",
@@ -575,6 +621,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
             {/* THIS IS THE RENDERER */}
             <article className={`prose max-w-none w-[210mm] min-h-[297mm] p-[20mm] bg-white shadow-2xl ${themeClasses.wrapper} print:shadow-none print:p-0`}>
               <ReactMarkdown
+                urlTransform={(url) => url} // <--- THIS WAS ADDED
                 components={{
                   // Unwrap PRE to avoid black box around code blocks
                   pre: ({children}) => <>{children}</>,
@@ -584,7 +631,8 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                     const match = /language-([\w:.-]+)/.exec(className || '');
                     let type = match ? match[1] : '';
                     
-                    const contentStr = String(children).trim();
+                    // IMPORTANT: Do NOT trim() here, or we lose exact match for replacement logic
+                    const contentStr = String(children);
 
                     // 1. Handle Special JSON Components
                     if (type.includes('toc') || type.includes('menu') || type.includes('keypad') || type.includes('table') || type.includes('image')) {
@@ -616,7 +664,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
 
                     if (isBlock) {
                         return (
-                          <pre className="not-prose my-6 w-full overflow-x-auto rounded bg-gray-900 p-4 text-sm text-white print:bg-gray-100 print:text-black print:border print:border-gray-300">
+                          <pre className="not-prose my-6 w-full overflow-x-auto rounded bg-gray-900 p-4 text-sm text-white print:bg-gray-100 print:text-black print:border print:border-gray-300 break-inside-avoid page-break-inside-avoid">
                             <code className={className} {...props}>{children}</code>
                           </pre>
                         );
@@ -636,7 +684,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                   // STANDARD TABLE (Only for simple lists)
                   table: ({node, children, ...props}) => {
                     return (
-                        <div className={`w-full ${themeClasses.tableContainer} manual-table-root`}>
+                        <div className={`w-full ${themeClasses.tableContainer} manual-table-root break-inside-avoid page-break-inside-avoid`}>
                             <table className={themeClasses.table} {...props}>
                                 {children}
                             </table>
@@ -654,7 +702,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                     const contentStr = String(children);
                     if (contentStr.includes('[!WARNING]')) {
                          return (
-                            <div className="not-prose my-6 w-full p-4 border-l-8 border-red-500 bg-red-50 rounded-r shadow-sm flex gap-4 items-start print:bg-white print:border-red-600">
+                            <div className="not-prose my-6 w-full p-4 border-l-8 border-red-500 bg-red-50 rounded-r shadow-sm flex gap-4 items-start print:bg-white print:border-red-600 break-inside-avoid page-break-inside-avoid">
                                 <AlertTriangle className="w-6 h-6 text-red-600 shrink-0 mt-1" />
                                 <div className="text-red-900 font-medium print:text-black">
                                     {contentStr.replace('[!WARNING]', '')}
@@ -664,7 +712,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                     }
                     if (contentStr.includes('[!NOTE]')) {
                          return (
-                            <div className="not-prose my-6 w-full p-4 border-l-8 border-blue-500 bg-blue-50 rounded-r shadow-sm flex gap-4 items-start print:bg-white print:border-blue-600">
+                            <div className="not-prose my-6 w-full p-4 border-l-8 border-blue-500 bg-blue-50 rounded-r shadow-sm flex gap-4 items-start print:bg-white print:border-blue-600 break-inside-avoid page-break-inside-avoid">
                                 <HelpCircle className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
                                 <div className="text-blue-900 italic font-medium print:text-black">
                                     {contentStr.replace('[!NOTE]', '')}
@@ -672,10 +720,10 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                             </div>
                          )
                     }
-                    return <blockquote className={`w-full ${themeClasses.blockquote}`} {...props}>{children}</blockquote>;
+                    return <blockquote className={`w-full ${themeClasses.blockquote} break-inside-avoid page-break-inside-avoid`} {...props}>{children}</blockquote>;
                   },
                   img: ({node, ...props}) => (
-                    <div className="not-prose my-6 w-full flex flex-col items-center">
+                    <div className="not-prose my-6 w-full flex flex-col items-center break-inside-avoid page-break-inside-avoid">
                       <img {...props} className="max-w-full max-h-[100mm] object-contain border border-gray-200 rounded-sm shadow-sm" />
                     </div>
                   ),
@@ -684,15 +732,21 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                   
                   // PAGE BREAK RENDERER (HR)
                   hr: ({node, ...props}) => (
-                     <div className="not-prose h-12 bg-gray-200 border-none relative flex items-center justify-center print:hidden -mx-[20mm] my-[20mm] shadow-inner">
+                     <div className="not-prose h-12 bg-gray-200 border-none relative flex items-center justify-center print:hidden -mx-[20mm] my-[20mm] shadow-inner page-break-always">
                         <span className="bg-gray-200 px-4 text-gray-400 text-xs font-mono uppercase">Koniec strany</span>
-                        <div className="page-break-before-always hidden print:block"></div>
+                        <div className="page-break-always hidden print:block"></div>
                      </div>
                   )
                 }}
               >
                 {content}
               </ReactMarkdown>
+
+               {/* FIXED PRINT FOOTER */}
+               <div className="print-footer-container hidden print:flex">
+                  <span>{config.replacements[0]?.replacement || 'Elift'} Manuál</span>
+                  <span>{new Date().toLocaleDateString('sk-SK')}</span>
+               </div>
             </article>
             <div className="mt-12 pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-400 print:hidden w-full max-w-[210mm]">
               <span>Elift Documentation</span>
