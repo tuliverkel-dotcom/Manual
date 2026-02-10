@@ -69,14 +69,16 @@
       /* --- FINAL PRINT FIXES --- */
       @media print {
         @page {
-          size: A4;
-          /* Increased bottom margin to ensure footer is visible */
-          margin: 15mm 15mm 20mm 15mm; 
+          /* Force Portrait to fix "Landscape" issue */
+          size: A4 portrait; 
+          /* Standard margins - removed the extra bottom space since footer is gone */
+          margin: 15mm 15mm 15mm 15mm; 
         }
 
         body {
-          counter-reset: printPage;
           background: white;
+          margin: 0;
+          padding: 0;
         }
 
         /* Hide UI elements */
@@ -89,20 +91,21 @@
           visibility: visible;
         }
 
-        /* COVER PAGE SPECIFICS */
+        /* COVER PAGE SPECIFICS - FIX FOR LANDSCAPE ISSUE */
         .print-cover {
           break-after: page !important;
           page-break-after: always !important;
-          height: 100vh !important;
+          /* Use min-height instead of fixed height to avoid overflow triggers */
+          min-height: 98vh !important; 
           width: 100% !important;
+          max-width: 100% !important;
           display: flex !important;
           flex-direction: column;
           justify-content: center;
           position: relative;
-          top: 0;
-          left: 0;
           margin: 0 !important;
           padding: 0 !important;
+          overflow: hidden !important; /* Critical to prevent landscape switch */
         }
 
         /* MAIN CONTENT LAYOUT */
@@ -111,7 +114,7 @@
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
-          display: block !important; /* Forces block layout to prevent flex gaps */
+          display: block !important;
           max-width: none !important;
           box-shadow: none !important;
           font-size: 11pt !important;
@@ -122,7 +125,7 @@
         /* REMOVE GAPS: Aggressive Gap Removal */
         p, h1, h2, h3, h4, ul, ol, li, div {
            margin-top: 0;
-           margin-bottom: 0.5em; /* Standardize spacing */
+           margin-bottom: 0.5em;
         }
 
         /* HEADINGS: Keep with text */
@@ -133,11 +136,11 @@
           margin-bottom: 0.5em !important;
         }
 
-        /* TABLES & LISTS: Allow split, but keep rows intact */
+        /* TABLES & LISTS */
         table, ul, ol, .manual-table-root {
           break-inside: auto !important;
           page-break-inside: auto !important;
-          display: table !important; /* Helps browsers handle table breaks */
+          display: table !important;
         }
         
         tr, li, .toc-row {
@@ -145,7 +148,7 @@
           page-break-inside: avoid !important;
         }
 
-        /* IMAGES: Never split */
+        /* IMAGES */
         figure, img, .image-block {
           break-inside: avoid !important;
           page-break-inside: avoid !important;
@@ -160,27 +163,8 @@
           display: block;
           margin: 0 !important;
         }
-
-        /* FOOTER VISIBILITY FIX */
-        .print-footer-container {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 10mm; /* Height of the footer area */
-          display: flex !important;
-          justify-content: space-between;
-          align-items: center;
-          border-top: 1px solid #ccc;
-          background: white;
-          visibility: visible !important;
-          z-index: 9999;
-          padding-top: 2mm;
-        }
         
-        .print-footer-container * {
-          visibility: visible !important;
-        }
+        /* FOOTER IS GONE - CSS Removed */
       }
     </style>
   <script type="importmap">
