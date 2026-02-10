@@ -69,16 +69,18 @@
       /* --- FINAL PRINT FIXES --- */
       @media print {
         @page {
-          /* Force Portrait to fix "Landscape" issue */
+          /* Force A4 Portrait */
           size: A4 portrait; 
-          /* Standard margins - removed the extra bottom space since footer is gone */
-          margin: 15mm 15mm 15mm 15mm; 
+          /* CRITICAL: Set margins to 0 to allow full-bleed cover page */
+          margin: 0;
         }
 
-        body {
-          background: white;
+        html, body {
+          width: 210mm;
+          height: 100%;
           margin: 0;
           padding: 0;
+          background: white;
         }
 
         /* Hide UI elements */
@@ -91,35 +93,34 @@
           visibility: visible;
         }
 
-        /* COVER PAGE SPECIFICS - FIX FOR LANDSCAPE ISSUE */
+        /* COVER PAGE SPECIFICS - STRICT A4 DIMENSIONS */
         .print-cover {
           break-after: page !important;
           page-break-after: always !important;
-          /* Use min-height instead of fixed height to avoid overflow triggers */
-          min-height: 98vh !important; 
-          width: 100% !important;
-          max-width: 100% !important;
-          display: flex !important;
-          flex-direction: column;
-          justify-content: center;
+          width: 210mm !important;
+          height: 297mm !important;
           position: relative;
+          top: 0;
+          left: 0;
           margin: 0 !important;
           padding: 0 !important;
-          overflow: hidden !important; /* Critical to prevent landscape switch */
+          overflow: hidden !important;
+          display: flex !important;
+          flex-direction: column;
         }
 
         /* MAIN CONTENT LAYOUT */
         .print-content {
           position: relative;
-          width: 100% !important;
+          width: 210mm !important;
           margin: 0 !important;
-          padding: 0 !important;
+          /* Since @page margin is 0, we MUST add padding here for text content */
+          padding: 20mm 15mm 20mm 15mm !important; 
           display: block !important;
-          max-width: none !important;
-          box-shadow: none !important;
           font-size: 11pt !important;
           line-height: 1.4 !important;
           color: black !important;
+          box-sizing: border-box !important;
         }
 
         /* REMOVE GAPS: Aggressive Gap Removal */
@@ -163,8 +164,6 @@
           display: block;
           margin: 0 !important;
         }
-        
-        /* FOOTER IS GONE - CSS Removed */
       }
     </style>
   <script type="importmap">
