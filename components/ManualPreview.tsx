@@ -619,9 +619,9 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
         ) : (
           <div className="w-full flex flex-col items-center">
             {/* THIS IS THE RENDERER */}
-            <article className={`prose max-w-none w-[210mm] min-h-[297mm] p-[20mm] bg-white shadow-2xl ${themeClasses.wrapper} print:shadow-none print:p-0`}>
+            <article className={`print-content prose max-w-none w-[210mm] min-h-[297mm] p-[20mm] bg-white shadow-2xl ${themeClasses.wrapper} print:shadow-none print:p-0`}>
               <ReactMarkdown
-                urlTransform={(url) => url} // <--- THIS WAS ADDED
+                urlTransform={(url) => url} 
                 components={{
                   // Unwrap PRE to avoid black box around code blocks
                   pre: ({children}) => <>{children}</>,
