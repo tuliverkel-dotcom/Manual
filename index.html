@@ -78,155 +78,161 @@
         padding-left: 4px;
       }
 
-      /* --- STRICT PROFESSIONAL PRINT STYLES --- */
+      /* --- EXTREME PROFESSIONAL PRINT STYLES --- */
       @media print {
         @page {
           size: A4;
-          margin: 15mm 15mm 15mm 15mm;
+          margin: 20mm 15mm 20mm 15mm; /* Top Right Bottom Left */
         }
         
+        /* 1. RESET EVERYTHING */
         html, body {
-          background-color: white;
-          width: 100%;
-          margin: 0;
-          padding: 0;
+          background-color: white !important;
+          width: 210mm; /* Force A4 Width */
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: visible !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
 
         #root {
           display: block !important;
+          width: 100% !important;
         }
 
+        /* 2. KILL FLEXBOX/GRID IN LAYOUT */
+        /* This is crucial. Flexbox confuses page break calculations. */
+        .flex, .flex-col, .grid {
+          display: block !important;
+        }
+        
         /* HIDE UI ELEMENTS */
-        .no-print, header, .print:hidden {
+        .no-print, header, .print:hidden, button, input, select, .sticky {
           display: none !important;
         }
 
-        /* 1. LAYOUT & TYPOGRAPHY */
+        /* 3. TYPOGRAPHY FLOW */
         .prose {
           max-width: 100% !important;
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
-          box-shadow: none !important;
+          font-size: 11pt !important; /* Ideal reading size for print */
+          line-height: 1.5 !important;
         }
 
         p {
           text-align: justify;
-          orphans: 3; 
-          widows: 3; 
+          margin-bottom: 1em !important;
+          /* Keep at least 3 lines together. Prevents single lines at top/bottom */
+          orphans: 3 !important; 
+          widows: 3 !important; 
         }
 
-        /* 2. STRICT PAGE BREAK RULES */
+        /* 4. PAGE BREAK RULES */
         
-        /* General H1 Rule: Start new page */
+        /* H1: Always new page, unless it's the very first title */
         h1 {
           break-before: page !important;
           page-break-before: always !important;
           margin-top: 0 !important;
-          padding-top: 20px !important;
-        }
-
-        /* FIX BLANK FIRST PAGE: 
-           The very first element in the content wrapper (print-content) 
-           should NOT force a page break, even if it is an H1. 
-        */
-        .print-content > *:first-child,
-        .print-content > h1:first-child,
-        .print-content > div:first-child h1 {
-          break-before: avoid !important;
-          page-break-before: avoid !important;
-          margin-top: 0 !important;
           padding-top: 0 !important;
+          margin-bottom: 20px !important;
         }
 
-        /* H2 & H3 grouping */
-        h2 {
-          break-after: avoid !important;
-          page-break-after: avoid !important;
-          margin-top: 30px !important;
-          margin-bottom: 10px !important;
-          break-inside: avoid !important;
-        }
-        h3 {
-          break-after: avoid !important;
-          page-break-after: avoid !important;
-          break-inside: avoid !important;
+        /* Exception for the first H1 in the document */
+        .print-content > h1:first-child,
+        .print-content > div:first-child > h1:first-child {
+          break-before: auto !important;
+          page-break-before: auto !important;
         }
 
-        /* 3. TABLE HANDLING - THE MAGIC PART */
+        /* H2, H3: Glue to the text below them */
+        h2, h3, h4 {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+          break-inside: avoid !important;
+          margin-top: 2em !important;
+          margin-bottom: 0.8em !important;
+        }
+
+        /* 5. TABLES - THE CRITICAL PART */
         
-        /* The Wrapper */
         .manual-table-root {
           width: 100% !important;
-          display: block;
-          margin-bottom: 15px;
-          /* Prefer moving whole table to next page if it doesn't fit */
-          break-inside: avoid; 
-          page-break-inside: avoid;
+          margin-bottom: 1.5em !important;
+          display: block !important;
         }
 
-        /* The Table itself */
         table {
           width: 100% !important;
           border-collapse: collapse !important;
-          font-size: 0.85rem !important; /* Make font slightly smaller to fit better */
+          font-size: 10pt !important; /* Slightly smaller for tables */
+          /* Allow table to break across pages if it's long */
+          break-inside: auto; 
         }
 
-        /* Table Headers */
+        /* BUT header must repeat */
         thead {
-          display: table-header-group !important; /* REPEATS HEADER ON NEW PAGE if split */
+          display: table-header-group !important; 
         }
 
-        /* Table Rows */
+        /* AND rows must not be cut in half */
         tr {
           break-inside: avoid !important;
           page-break-inside: avoid !important;
         }
 
-        /* Table Cells */
         td, th {
-          padding: 4px 8px !important; /* Tighter padding for print */
+          padding: 6px 8px !important;
         }
 
-        /* 4. IMAGES & BLOCKS */
+        /* 6. COMPONENT PROTECTION */
+        /* Ensure these blocks don't get split */
         figure, 
-        .not-prose.border, 
-        blockquote {
+        .not-prose.border, /* Menu/Keypad/Notes containers */
+        blockquote,
+        pre,
+        li {
           break-inside: avoid !important;
           page-break-inside: avoid !important;
-          margin-bottom: 20px !important;
+          margin-bottom: 1.5em !important;
+          display: block !important;
         }
 
         img {
-          max-height: 230mm !important;
-          width: auto;
-          break-inside: avoid !important;
+          max-width: 100% !important;
+          max-height: 230mm !important; /* Fit within margins */
+          height: auto !important;
         }
 
-        pre {
-          break-inside: avoid !important;
-          white-space: pre-wrap !important;
-          font-size: 0.8rem !important;
-        }
-
-        /* 5. FOOTER */
+        /* 7. FOOTER */
         .print-footer-container {
           position: fixed;
           bottom: 0;
           left: 0;
           right: 0;
-          height: 10mm;
-          display: flex;
+          height: 8mm;
+          display: flex !important; /* Force flex here specifically */
           justify-content: space-between;
           align-items: center;
-          border-top: 1px solid #e2e8f0;
+          border-top: 1px solid #ccc;
           padding-top: 2mm;
-          font-size: 9px;
-          color: #64748b;
+          font-size: 8pt;
+          color: #666;
           background: white;
           z-index: 9999;
+        }
+
+        /* 8. LISTS */
+        ul, ol {
+            padding-left: 1.5em !important;
+            margin-bottom: 1em !important;
+        }
+        li {
+            margin-bottom: 0.5em !important;
         }
         
         .page-break-always {
@@ -234,6 +240,7 @@
           page-break-before: always !important;
           height: 0;
           display: block;
+          visibility: hidden;
         }
       }
     </style>

@@ -33,7 +33,7 @@ const TocComponent = ({ data, themeClasses }: { data: any[], themeClasses: any }
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach obsahu (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-10 w-full max-w-[210mm] break-inside-avoid page-break-inside-avoid">
+    <div className="not-prose my-10 w-full break-inside-avoid page-break-inside-avoid">
       <h4 className={`text-center text-lg font-black uppercase tracking-widest mb-8 border-b-2 border-gray-900 pb-2 ${themeClasses.strong.split(' ')[0]}`}>Obsah</h4>
       <div className="flex flex-col gap-0.5 w-full">
         {data.map((item, idx) => (
@@ -53,7 +53,7 @@ const MenuComponent = ({ data, themeClasses }: { data: any[], themeClasses: any 
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach menu (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-8 w-full max-w-[210mm] border border-gray-200 rounded-lg overflow-hidden shadow-sm break-inside-avoid page-break-inside-avoid">
+    <div className="not-prose my-8 w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm break-inside-avoid page-break-inside-avoid">
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
         <span>Cesta / Položka</span>
         <span>Popis</span>
@@ -91,7 +91,7 @@ const KeypadComponent = ({ data, themeClasses }: { data: any[], themeClasses: an
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach klávesnice (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-8 w-full max-w-[210mm] bg-[#f8f9fa] border border-gray-200 rounded-lg p-1 break-inside-avoid page-break-inside-avoid">
+    <div className="not-prose my-8 w-full bg-[#f8f9fa] border border-gray-200 rounded-lg p-1 break-inside-avoid page-break-inside-avoid">
       <table className="w-full border-collapse">
          <thead>
              <tr className="text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-200">
@@ -126,7 +126,7 @@ const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }
   if (!data || !data.headers || !data.rows) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach tabuľky</div>;
 
   return (
-    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root break-inside-avoid page-break-inside-avoid`}>
+    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root`}>
       <table className={themeClasses.table}>
         <thead className={themeClasses.tableHeader}>
           <tr>
