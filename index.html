@@ -40,10 +40,10 @@
         gap: 0.5rem;
         align-items: end;
         width: 100%;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem; /* Tighter TOC */
       }
       .toc-title {
-        font-weight: 500;
+        font-weight: 600;
         color: #111;
         position: relative;
         z-index: 1;
@@ -63,24 +63,29 @@
         padding-left: 4px;
       }
 
-      /* --- NUCLEAR PRINT STYLES (THE FIX) --- */
+      /* --- NUCLEAR PRINT STYLES (THE FIX v2) --- */
       @media print {
         @page {
           size: A4;
-          margin: 15mm 15mm 15mm 15mm;
+          margin: 15mm 15mm 20mm 15mm; /* Bottom margin increased for footer */
         }
 
-        /* 1. HIDE EVERYTHING ELSE */
+        /* 1. CSS Counter for Pages */
+        body {
+          counter-reset: printPage;
+        }
+
+        /* 2. Hide UI */
         body * {
-          visibility: hidden; /* Hide all elements */
+          visibility: hidden;
         }
 
-        /* 2. SHOW ONLY THE CONTENT */
+        /* 3. Show Content */
         .print-content, .print-content * {
-          visibility: visible; /* Show content */
+          visibility: visible;
         }
 
-        /* 3. POSITION CONTENT TO FILL PAGE */
+        /* 4. Main Layout Reset */
         .print-content {
           position: absolute;
           left: 0;
@@ -89,82 +94,102 @@
           margin: 0 !important;
           padding: 0 !important;
           background: white;
-          /* Reset any flex/grid constraints from the app */
           display: block !important;
           overflow: visible !important;
           max-width: none !important;
           box-shadow: none !important;
+          
+          /* Typography optimization for Print */
+          font-size: 10pt !important; /* Standard manual font size */
+          line-height: 1.4 !important; /* Slightly tighter than web */
+          color: black !important;
         }
 
-        /* 4. REMOVE APP SCROLLBARS */
-        html, body {
-          height: auto !important;
-          overflow: visible !important;
-          background: white !important;
+        /* 5. Vdovy a Siroty (Widows & Orphans) - Prevents single lines */
+        p, li, div {
+          orphans: 3 !important; /* Minimum lines at bottom of page */
+          widows: 3 !important;  /* Minimum lines at top of page */
         }
 
-        /* 5. TABLE LOGIC (Fixing the cut-off rows) */
+        /* 6. Keep headings with text */
+        h1, h2, h3, h4, h5, h6 {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+          margin-top: 1.5em !important;
+          margin-bottom: 0.5em !important;
+        }
+
+        /* 7. Don't break inside these elements */
+        table, figure, blockquote, ul, ol, .manual-table-root, .toc-row {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        
+        /* 8. Table Optimizations */
         table {
           width: 100% !important;
           border-collapse: collapse !important;
-          font-size: 10pt !important; /* Smaller text fits better */
-          page-break-inside: auto; /* Allow table to span pages */
+          font-size: 9pt !important; /* Smaller tables */
+          margin-bottom: 1em !important;
         }
         
         thead {
-          display: table-header-group !important; /* Repeat Header on new page */
+          display: table-header-group !important;
         }
         
         tr {
-          page-break-inside: avoid !important; /* NEVER split a row in half */
-          break-inside: avoid !important;
+          page-break-inside: avoid !important;
         }
 
         td, th {
-          padding: 5px 8px !important; /* Tighter padding */
+          padding: 4px 6px !important;
         }
 
-        /* 6. TYPOGRAPHY & LAYOUT */
+        /* 9. Images */
+        img {
+          max-width: 100% !important;
+          max-height: 120mm !important; /* Limit image height so it fits */
+          page-break-inside: avoid;
+        }
+
+        /* 10. Explicit Page Breaks */
         h1 {
           break-before: page !important;
           page-break-before: always !important;
-          margin-top: 0 !important;
         }
-        /* Exception for first page title */
+        /* First H1 shouldn't break */
         .print-content > h1:first-child,
         .print-content > div:first-child > h1:first-child {
           break-before: avoid !important;
           page-break-before: avoid !important;
+          margin-top: 0 !important;
+        }
+        
+        /* The separator div */
+        .page-break-always {
+          break-before: page !important;
+          page-break-before: always !important;
+          height: 0;
+          display: block;
         }
 
-        h2, h3 {
-          break-after: avoid !important;
-          page-break-after: avoid !important;
-        }
-
-        img {
-          max-width: 100% !important;
-          page-break-inside: avoid;
-        }
-
-        /* 7. Hide "No Print" elements explicitly just in case */
-        .no-print {
-          display: none !important;
-        }
-
-        /* 8. Footer */
+        /* 11. Custom Footer with Page Numbers */
         .print-footer-container {
           position: fixed;
           bottom: 0;
           left: 0;
           right: 0;
-          height: 10mm;
+          height: 8mm;
           display: flex !important;
           justify-content: space-between;
+          align-items: center;
           border-top: 1px solid #ccc;
+          padding-top: 2mm;
           font-size: 8pt;
+          background: white;
           visibility: visible !important;
         }
+        
         .print-footer-container * {
           visibility: visible !important;
         }

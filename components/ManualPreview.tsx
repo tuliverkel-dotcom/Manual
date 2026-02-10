@@ -126,7 +126,7 @@ const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }
   if (!data || !data.headers || !data.rows) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach tabuľky</div>;
 
   return (
-    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root`}>
+    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root break-inside-avoid page-break-inside-avoid`}>
       <table className={themeClasses.table}>
         <thead className={themeClasses.tableHeader}>
           <tr>
@@ -793,6 +793,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                {/* FIXED PRINT FOOTER */}
                <div className="print-footer-container hidden print:flex">
                   <span>{config.replacements[0]?.replacement || 'Elift'} Manuál</span>
+                  <span className="print-page-number relative after:content-['Strana_'counter(printPage)]"></span>
                </div>
             </article>
             <div className="mt-12 pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-400 print:hidden w-full max-w-[210mm]">
