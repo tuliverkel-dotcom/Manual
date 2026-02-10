@@ -732,10 +732,12 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                   
                   // PAGE BREAK RENDERER (HR)
                   hr: ({node, ...props}) => (
-                     <div className="not-prose h-12 bg-gray-200 border-none relative flex items-center justify-center print:hidden -mx-[20mm] my-[20mm] shadow-inner page-break-always">
-                        <span className="bg-gray-200 px-4 text-gray-400 text-xs font-mono uppercase">Koniec strany</span>
-                        <div className="page-break-always hidden print:block"></div>
-                     </div>
+                     <>
+                        <div className="not-prose h-12 bg-gray-200 border-none relative flex items-center justify-center print:hidden -mx-[20mm] my-[20mm] shadow-inner">
+                           <span className="bg-gray-200 px-4 text-gray-400 text-xs font-mono uppercase">Koniec strany</span>
+                        </div>
+                        <div className="page-break-always"></div>
+                     </>
                   )
                 }}
               >

@@ -75,8 +75,9 @@ const App: React.FC = () => {
         // Generate content for this chunk
         const chunkContent = await generateManualFromPDF(file, config);
         
-        // Append to final content with a separator
-        finalMarkdown += chunkContent + "\n\n<div style='page-break-before: always;'></div>\n\n";
+        // Append to final content with a standard markdown separator
+        // This '---' will be intercepted by the renderer to create a page break
+        finalMarkdown += chunkContent + "\n\n---\n\n";
       }
 
       setGeneratedContent(finalMarkdown);
