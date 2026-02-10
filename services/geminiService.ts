@@ -39,7 +39,7 @@ export const generateManualFromPDF = async (
 
   const mainBrand = config.replacements.length > 0 ? config.replacements[0].replacement : "Elift Solutions";
 
-  // PROMPT UPDATE: Added json:image instructions
+  // PROMPT UPDATE: Added json:image instructions and GmbH removal
   const prompt = `
     You are a Technical Documentation Expert.
     
@@ -49,7 +49,8 @@ export const generateManualFromPDF = async (
     **🚫 STRICT EXCLUSION RULES (DELETE THESE):**
     1. **LEGAL:** Remove copyright (©), "All rights reserved", disclaimers, addresses, fax, emails, websites in footers.
     2. **METADATA:** Remove document IDs, revision dates, "Original Instructions".
-    3. **Start directly with the content.**
+    3. **CORPORATE:** Remove "GmbH", "Co. KG", "Inc.", "S.r.o" from company names. Just use the brand name.
+    4. **Start directly with the content.**
 
     **✅ DATA BLOCK RULES (USE JSON FOR ALL STRUCTURED DATA):**
     

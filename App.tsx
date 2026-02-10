@@ -16,6 +16,8 @@ const DEFAULT_CONFIG: ManualConfig = {
     { id: '1', original: 'intec', replacement: 'elift' },
     { id: '2', original: 'mlc800', replacement: 'eliftecV2' },
     { id: '3', original: 'Intec Corp', replacement: 'Elift Solutions' },
+    { id: '4', original: 'GmbH', replacement: '' },
+    { id: '5', original: 'gmbh', replacement: '' },
   ],
 };
 

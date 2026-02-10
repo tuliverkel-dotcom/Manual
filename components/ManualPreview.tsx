@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon, Edit3, Save, Upload, FolderDown, PlusSquare, Table, AlertTriangle, Terminal, Grid, List, ChevronRight, FileJson, Camera, CircuitBoard } from 'lucide-react';
 import { ManualTheme, ManualConfig, SavedProject } from '../types';
@@ -159,22 +159,26 @@ const ImageBlockComponent = ({ data, themeClasses, onUpload }: { data: any, them
   return (
     <div className="not-prose w-full my-8 break-inside-avoid page-break-inside-avoid">
        <figure className="flex flex-col items-center w-full">
-         <label className={`w-full ${themeClasses.imagePlaceholder} relative flex flex-col items-center justify-center min-h-[160px]`}>
+         <label className={`
+            w-full relative flex flex-col items-center justify-center min-h-[160px]
+            ${themeClasses.imagePlaceholder}
+            print:border print:border-solid print:border-gray-300 print:bg-white print:text-gray-500 print:shadow-none
+         `}>
             <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                  if(e.target.files?.[0]) onUpload(e.target.files[0]);
             }} />
             
-            <Icon className="w-10 h-10 text-gray-300 mb-2" />
+            <Icon className="w-10 h-10 text-gray-300 mb-2 print:text-gray-200" />
             
-            <span className="font-bold text-gray-500 group-hover:text-gray-800 transition-colors">
+            <span className="font-bold text-gray-500 group-hover:text-gray-800 transition-colors print:text-gray-600 print:text-sm">
               {data.type === 'diagram' ? 'Vložiť Diagram / Schému' : 'Vložiť Fotografiu'}
             </span>
             
-            <div className="text-xs text-gray-400 mt-2 px-8 italic">
+            <div className="text-xs text-gray-400 mt-2 px-8 italic print:text-gray-400">
                "{data.description || 'Žiadny popis'}"
             </div>
             
-            <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded border shadow-sm text-[10px] font-mono text-gray-400 uppercase">
+            <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded border shadow-sm text-[10px] font-mono text-gray-400 uppercase print:hidden">
                AUTO-ID: {data.type}
             </div>
          </label>
@@ -194,6 +198,12 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // SANITIZE CONTENT: Replace the problematic HTML div string with a proper markdown separator
+  // This fixes files that were saved with the bug from the previous version
+  const safeContent = useMemo(() => {
+    return content.replace(/<div style='page-break-before: always;'><\/div>/g, '\n\n---\n\n');
+  }, [content]);
+
   const handlePrint = () => {
     const originalTitle = document.title;
     const brandName = config.replacements.length > 0 ? config.replacements[0].replacement : 'Elift';
@@ -205,7 +215,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
   };
 
   const handleDownloadMarkdown = () => {
-    const blob = new Blob([content], { type: 'text/markdown' });
+    const blob = new Blob([safeContent], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -222,7 +232,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
       version: "1.0",
       timestamp: Date.now(),
       config: currentConfig,
-      content: content
+      content: safeContent // Save the sanitized content
     };
     const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -741,13 +751,12 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                   )
                 }}
               >
-                {content}
+                {safeContent}
               </ReactMarkdown>
 
                {/* FIXED PRINT FOOTER */}
                <div className="print-footer-container hidden print:flex">
                   <span>{config.replacements[0]?.replacement || 'Elift'} Manuál</span>
-                  <span>{new Date().toLocaleDateString('sk-SK')}</span>
                </div>
             </article>
             <div className="mt-12 pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-400 print:hidden w-full max-w-[210mm]">
