@@ -521,7 +521,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
   const themeClasses = getThemeClasses();
 
   return (
-    <div className="flex flex-col h-full bg-gray-100">
+    <div className="flex flex-col h-full bg-gray-100 print:bg-white print:h-auto print:block">
       {/* Toolbar - Same as before */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm no-print sticky top-0 z-10">
         <div className="flex items-center gap-4">
@@ -592,10 +592,10 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
         </div>
       </div>
 
-      <div className={`flex-1 overflow-y-auto p-8 flex justify-center bg-gray-200 print:bg-white`}>
+      <div className={`flex-1 overflow-y-auto p-8 flex justify-center bg-gray-200 print:bg-white print:p-0 print:overflow-visible print:h-auto`}>
         
         {isEditing ? (
-          <div className="w-full max-w-[210mm] h-full flex flex-col">
+          <div className="w-full max-w-[210mm] h-full flex flex-col no-print">
             <div className="bg-gray-50 border border-gray-300 border-b-0 rounded-t-lg p-2 flex flex-wrap gap-2 items-center text-sm shadow-sm sticky top-0 z-10">
               <span className="text-gray-500 font-bold px-2 text-xs uppercase tracking-wider">Vložiť:</span>
               <button onClick={() => insertTextAtCursor(insertTemplates.tocTable)} className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 flex gap-1"><List className="w-4 h-4"/> Obsah</button>
@@ -617,9 +617,9 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
             />
           </div>
         ) : (
-          <div className="w-full flex flex-col items-center">
+          <div className="w-full flex flex-col items-center print:block print:w-full">
             {/* THIS IS THE RENDERER */}
-            <article className={`print-content prose max-w-none w-[210mm] min-h-[297mm] p-[20mm] bg-white shadow-2xl ${themeClasses.wrapper} print:shadow-none print:p-0`}>
+            <article className={`print-content prose max-w-none w-[210mm] min-h-[297mm] p-[20mm] bg-white shadow-2xl ${themeClasses.wrapper} print:shadow-none print:p-0 print:w-full print:max-w-none`}>
               <ReactMarkdown
                 urlTransform={(url) => url} 
                 components={{
