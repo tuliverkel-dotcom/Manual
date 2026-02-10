@@ -33,11 +33,13 @@ const TocComponent = ({ data, themeClasses }: { data: any[], themeClasses: any }
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach obsahu (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-10 w-full break-inside-avoid page-break-inside-avoid">
+    // REMOVED: break-inside-avoid from root container to allow splitting long TOCs
+    <div className="not-prose my-10 w-full">
       <h4 className={`text-center text-lg font-black uppercase tracking-widest mb-8 border-b-2 border-gray-900 pb-2 ${themeClasses.strong.split(' ')[0]}`}>Obsah</h4>
       <div className="flex flex-col gap-0.5 w-full">
         {data.map((item, idx) => (
-          <div key={idx} className="toc-row">
+          // Individual rows should not split
+          <div key={idx} className="toc-row break-inside-avoid page-break-inside-avoid">
             <span className="toc-title text-sm">{item.chapter}</span>
             <span className="toc-dots"></span>
             <span className="toc-page text-sm">{item.page}</span>
@@ -53,7 +55,8 @@ const MenuComponent = ({ data, themeClasses }: { data: any[], themeClasses: any 
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach menu (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-8 w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm break-inside-avoid page-break-inside-avoid">
+    // REMOVED: break-inside-avoid from root to allow splitting
+    <div className="not-prose my-8 w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm">
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
         <span>Cesta / Položka</span>
         <span>Popis</span>
@@ -62,7 +65,8 @@ const MenuComponent = ({ data, themeClasses }: { data: any[], themeClasses: any 
         {data.map((item, idx) => {
           const levels = item.path || [];
           return (
-            <div key={idx} className="flex flex-col sm:flex-row sm:items-center p-3 sm:px-4 sm:py-2 hover:bg-blue-50/30 transition-colors">
+            // Individual items avoid breaking
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center p-3 sm:px-4 sm:py-2 hover:bg-blue-50/30 transition-colors break-inside-avoid page-break-inside-avoid">
               <div className="flex-1 flex flex-wrap items-center gap-1 mb-1 sm:mb-0">
                 {levels.map((lvl: string, lIdx: number) => (
                   <React.Fragment key={lIdx}>
@@ -91,7 +95,8 @@ const KeypadComponent = ({ data, themeClasses }: { data: any[], themeClasses: an
   if (!Array.isArray(data)) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach klávesnice (očakávané pole)</div>;
 
   return (
-    <div className="not-prose my-8 w-full bg-[#f8f9fa] border border-gray-200 rounded-lg p-1 break-inside-avoid page-break-inside-avoid">
+    // REMOVED: break-inside-avoid from root
+    <div className="not-prose my-8 w-full bg-[#f8f9fa] border border-gray-200 rounded-lg p-1">
       <table className="w-full border-collapse">
          <thead>
              <tr className="text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-200">
@@ -104,7 +109,8 @@ const KeypadComponent = ({ data, themeClasses }: { data: any[], themeClasses: an
             {data.map((item, idx) => {
                 const inputKeys = item.inputs ? String(item.inputs).split(' ') : [];
                 return (
-                    <tr key={idx} className="hover:bg-gray-50">
+                    // Rows avoid breaking
+                    <tr key={idx} className="hover:bg-gray-50 break-inside-avoid page-break-inside-avoid">
                         <td className="p-3 align-middle">
                             <div className="flex flex-wrap gap-0.5">
                                 {inputKeys.map((k: string, ki: number) => <KeyCap key={ki} text={k} themeClasses={themeClasses} />)}
@@ -126,7 +132,8 @@ const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }
   if (!data || !data.headers || !data.rows) return <div className="text-red-500 bg-red-50 p-2 text-xs border border-red-200 rounded">Chyba v dátach tabuľky</div>;
 
   return (
-    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root break-inside-avoid page-break-inside-avoid`}>
+    // REMOVED: break-inside-avoid from root container to allow splitting
+    <div className={`not-prose w-full ${themeClasses.tableContainer} manual-table-root`}>
       <table className={themeClasses.table}>
         <thead className={themeClasses.tableHeader}>
           <tr>
@@ -137,7 +144,8 @@ const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }
         </thead>
         <tbody className={themeClasses.tableBody}>
           {data.rows.map((row: string[], rI: number) => (
-            <tr key={rI} className={rI % 2 !== 0 ? themeClasses.tableRowEven : ""}>
+            // Rows avoid breaking
+            <tr key={rI} className={`${rI % 2 !== 0 ? themeClasses.tableRowEven : ""} break-inside-avoid page-break-inside-avoid`}>
                {row.map((cell: string, cI: number) => (
                  <td key={cI} className={themeClasses.tableTd}>{cell}</td>
                ))}
@@ -157,8 +165,8 @@ const ImageBlockComponent = ({ data, themeClasses, onUpload }: { data: any, them
   const Icon = data.type === 'diagram' ? CircuitBoard : Camera;
 
   return (
-    // UPDATED: Added 'print:hidden' to hide empty placeholders in PDF
-    <div className="not-prose w-full my-8 break-inside-avoid page-break-inside-avoid print:hidden">
+    // KEEP: Images should generally avoid breaking inside
+    <div className="not-prose w-full my-8 break-inside-avoid page-break-inside-avoid print:hidden image-block">
        <figure className="flex flex-col items-center w-full">
          <label className={`
             w-full relative flex flex-col items-center justify-center min-h-[160px] cursor-pointer
@@ -707,7 +715,8 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                   // STANDARD TABLE (Only for simple lists)
                   table: ({node, children, ...props}) => {
                     return (
-                        <div className={`w-full ${themeClasses.tableContainer} manual-table-root break-inside-avoid page-break-inside-avoid`}>
+                        // REMOVED: break-inside-avoid from wrapper
+                        <div className={`w-full ${themeClasses.tableContainer} manual-table-root`}>
                             <table className={themeClasses.table} {...props}>
                                 {children}
                             </table>
@@ -716,7 +725,7 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                   },
                   thead: ({node, ...props}) => <thead className={themeClasses.tableHeader} {...props} />,
                   tbody: ({node, ...props}) => <tbody className={themeClasses.tableBody} {...props} />,
-                  tr: ({node, ...props}) => <tr className={`even:${themeClasses.tableRowEven} border-b border-gray-200 last:border-0`} {...props} />,
+                  tr: ({node, ...props}) => <tr className={`even:${themeClasses.tableRowEven} border-b border-gray-200 last:border-0 break-inside-avoid page-break-inside-avoid`} {...props} />,
                   th: ({node, ...props}) => <th className={themeClasses.tableTh} {...props} />,
                   td: ({node, children, ...props}) => <td className={themeClasses.tableTd} {...props}>{children}</td>,
                   

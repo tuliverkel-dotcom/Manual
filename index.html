@@ -63,11 +63,11 @@
         padding-left: 4px;
       }
 
-      /* --- NUCLEAR PRINT STYLES (THE FIX v2) --- */
+      /* --- NUCLEAR PRINT STYLES (SMART SPLIT VERSION) --- */
       @media print {
         @page {
           size: A4;
-          margin: 15mm 15mm 20mm 15mm; /* Bottom margin increased for footer */
+          margin: 15mm 15mm 20mm 15mm; /* Margins: Top Right Bottom Left */
         }
 
         /* 1. CSS Counter for Pages */
@@ -100,36 +100,51 @@
           box-shadow: none !important;
           
           /* Typography optimization for Print */
-          font-size: 10pt !important; /* Standard manual font size */
-          line-height: 1.4 !important; /* Slightly tighter than web */
+          font-size: 10pt !important;
+          line-height: 1.3 !important; 
           color: black !important;
         }
 
-        /* 5. Vdovy a Siroty (Widows & Orphans) - Prevents single lines */
-        p, li, div {
-          orphans: 3 !important; /* Minimum lines at bottom of page */
-          widows: 3 !important;  /* Minimum lines at top of page */
+        /* 5. Smart Breaking Rules */
+        /* Allow paragraphs to break, but avoid widows/orphans */
+        p {
+          orphans: 3 !important; 
+          widows: 3 !important;
         }
 
-        /* 6. Keep headings with text */
+        /* Headings stay with next content */
         h1, h2, h3, h4, h5, h6 {
           break-after: avoid !important;
           page-break-after: avoid !important;
+          break-inside: avoid !important;
           margin-top: 1.5em !important;
           margin-bottom: 0.5em !important;
         }
 
-        /* 7. Don't break inside these elements */
-        table, figure, blockquote, ul, ol, .manual-table-root, .toc-row {
+        /* 6. Tables & Lists - THE FIX FOR GAPS */
+        /* Allow tables and lists to split across pages... */
+        table, ul, ol, .manual-table-root {
+          break-inside: auto !important;
+          page-break-inside: auto !important;
+        }
+
+        /* ...BUT keep individual rows/items intact */
+        tr, li, .toc-row {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+
+        /* Specific components that should be solid */
+        figure, blockquote, img, .image-block {
           break-inside: avoid !important;
           page-break-inside: avoid !important;
         }
         
-        /* 8. Table Optimizations */
+        /* 7. Table Optimizations */
         table {
           width: 100% !important;
           border-collapse: collapse !important;
-          font-size: 9pt !important; /* Smaller tables */
+          font-size: 9pt !important;
           margin-bottom: 1em !important;
         }
         
@@ -137,22 +152,11 @@
           display: table-header-group !important;
         }
         
-        tr {
-          page-break-inside: avoid !important;
-        }
-
         td, th {
           padding: 4px 6px !important;
         }
 
-        /* 9. Images */
-        img {
-          max-width: 100% !important;
-          max-height: 120mm !important; /* Limit image height so it fits */
-          page-break-inside: avoid;
-        }
-
-        /* 10. Explicit Page Breaks */
+        /* 8. Explicit Page Breaks */
         h1 {
           break-before: page !important;
           page-break-before: always !important;
@@ -173,7 +177,7 @@
           display: block;
         }
 
-        /* 11. Custom Footer with Page Numbers */
+        /* 9. Footer */
         .print-footer-container {
           position: fixed;
           bottom: 0;
@@ -188,6 +192,7 @@
           font-size: 8pt;
           background: white;
           visibility: visible !important;
+          z-index: 1000;
         }
         
         .print-footer-container * {
