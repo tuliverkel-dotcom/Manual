@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon, Edit3, Save, Upload, FolderDown, PlusSquare, Table, AlertTriangle, Terminal, Grid, List, ChevronRight, FileJson, Camera, CircuitBoard } from 'lucide-react';
+import { Printer, Download, ArrowLeft, HelpCircle, Palette, Image as ImageIcon, Edit3, Save, Upload, FolderDown, PlusSquare, Table, AlertTriangle, Terminal, Grid, List, ChevronRight, FileJson, Camera, CircuitBoard, RefreshCw, Trash2 } from 'lucide-react';
 import { ManualTheme, ManualConfig, SavedProject } from '../types';
 
 interface ManualPreviewProps {
@@ -149,7 +149,7 @@ const TableComponent = ({ data, themeClasses }: { data: any, themeClasses: any }
   );
 };
 
-// 6. Smart Image Component (JSON)
+// 6. Smart Image Component (JSON) - PLACEHOLDER
 const ImageBlockComponent = ({ data, themeClasses, onUpload }: { data: any, themeClasses: any, onUpload: (file: File) => void }) => {
   if (!data) return null;
   
@@ -157,28 +157,28 @@ const ImageBlockComponent = ({ data, themeClasses, onUpload }: { data: any, them
   const Icon = data.type === 'diagram' ? CircuitBoard : Camera;
 
   return (
-    <div className="not-prose w-full my-8 break-inside-avoid page-break-inside-avoid">
+    // UPDATED: Added 'print:hidden' to hide empty placeholders in PDF
+    <div className="not-prose w-full my-8 break-inside-avoid page-break-inside-avoid print:hidden">
        <figure className="flex flex-col items-center w-full">
          <label className={`
-            w-full relative flex flex-col items-center justify-center min-h-[160px]
+            w-full relative flex flex-col items-center justify-center min-h-[160px] cursor-pointer
             ${themeClasses.imagePlaceholder}
-            print:border print:border-solid print:border-gray-300 print:bg-white print:text-gray-500 print:shadow-none
          `}>
             <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                  if(e.target.files?.[0]) onUpload(e.target.files[0]);
             }} />
             
-            <Icon className="w-10 h-10 text-gray-300 mb-2 print:text-gray-200" />
+            <Icon className="w-10 h-10 text-gray-300 mb-2" />
             
-            <span className="font-bold text-gray-500 group-hover:text-gray-800 transition-colors print:text-gray-600 print:text-sm">
+            <span className="font-bold text-gray-500 group-hover:text-gray-800 transition-colors">
               {data.type === 'diagram' ? 'Vložiť Diagram / Schému' : 'Vložiť Fotografiu'}
             </span>
             
-            <div className="text-xs text-gray-400 mt-2 px-8 italic print:text-gray-400">
+            <div className="text-xs text-gray-400 mt-2 px-8 italic">
                "{data.description || 'Žiadny popis'}"
             </div>
             
-            <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded border shadow-sm text-[10px] font-mono text-gray-400 uppercase print:hidden">
+            <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded border shadow-sm text-[10px] font-mono text-gray-400 uppercase">
                AUTO-ID: {data.type}
             </div>
          </label>
@@ -243,6 +243,19 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // NEW: Handler to replace an existing image in the markdown content
+  const handleReplaceImage = (oldSrc: string, newFile: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const newBase64 = reader.result as string;
+      // We assume the oldSrc is unique enough or we replace the first occurrence in the block.
+      // Since it's a huge base64 string, simple replacement is safe.
+      const newContent = content.replace(oldSrc, newBase64);
+      onContentChange(newContent);
+    };
+    reader.readAsDataURL(newFile);
   };
 
   // --- EDITOR INSERTION ---
@@ -732,11 +745,34 @@ const ManualPreview: React.FC<ManualPreviewProps> = ({ content, config, onConten
                     }
                     return <blockquote className={`w-full ${themeClasses.blockquote} break-inside-avoid page-break-inside-avoid`} {...props}>{children}</blockquote>;
                   },
-                  img: ({node, ...props}) => (
-                    <div className="not-prose my-6 w-full flex flex-col items-center break-inside-avoid page-break-inside-avoid">
-                      <img {...props} className="max-w-full max-h-[100mm] object-contain border border-gray-200 rounded-sm shadow-sm" />
-                    </div>
-                  ),
+                  img: ({node, src, alt, ...props}) => {
+                    return (
+                      <div className="not-prose my-6 w-full flex flex-col items-center break-inside-avoid page-break-inside-avoid group relative">
+                        <img 
+                          src={src} 
+                          alt={alt}
+                          {...props} 
+                          className="max-w-full max-h-[100mm] object-contain border border-gray-200 rounded-sm shadow-sm" 
+                        />
+                        {/* CHANGE IMAGE BUTTON - Only visible on hover and NOT in print */}
+                        <label className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity print:hidden cursor-pointer">
+                          <div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md border border-gray-300 hover:bg-white text-gray-700 hover:text-brand-600">
+                             <RefreshCw className="w-4 h-4" />
+                          </div>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => {
+                                if (e.target.files?.[0] && src) {
+                                   handleReplaceImage(src, e.target.files[0]);
+                                }
+                            }} 
+                          />
+                        </label>
+                      </div>
+                    )
+                  },
                   strong: ({node, ...props}) => <strong className={themeClasses.strong} {...props} />,
                   a: ({node, ...props}) => <a className={themeClasses.link} {...props} />,
                   
