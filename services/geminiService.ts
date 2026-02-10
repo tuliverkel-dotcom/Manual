@@ -39,13 +39,42 @@ export const generateManualFromPDF = async (
 
   const mainBrand = config.replacements.length > 0 ? config.replacements[0].replacement : "Elift Solutions";
 
+  // DYNAMIC PROMPT BASED ON TONE
+  let toneInstruction = "";
+  
+  if (config.tone === 'simplified') {
+    // COMPACT MODE / LAYMAN MODE
+    toneInstruction = `
+    **⚠️ CRITICAL MODE: EXTREME SUMMARIZATION (USER GUIDE ONLY)**
+    1. **TARGET:** End-users / Non-technical staff.
+    2. **KEEP:** User operations, Safety warnings, Basic Troubleshooting, Display codes.
+    3. **DELETE:** Wiring diagrams, Installation dimensions, Screw torques, Internal protocols (CAN/RS485 details), PCB layouts, Deep technical specifications.
+    4. **STYLE:** Use bullet points. Be extremely concise. Merge paragraphs.
+    5. **GOAL:** Reduce content length by 60%. Only keep what is necessary to operate the device.
+    `;
+  } else if (config.tone === 'technical') {
+    toneInstruction = `
+    **MODE: FULL TECHNICAL**
+    1. Keep ALL technical details, parameters, voltages, and wiring instructions.
+    2. Use precise technical terminology.
+    `;
+  } else {
+    toneInstruction = `
+    **MODE: PROFESSIONAL**
+    1. Balance between readability and technical accuracy.
+    2. Keep structure similar to original.
+    `;
+  }
+
   // PROMPT UPDATE: Added json:image instructions and GmbH removal
   const prompt = `
     You are a Technical Documentation Expert.
     
     **TASK:** 
-    Extract technical content and convert it into **STRUCTURED MARKDOWN**.
+    Extract content from the PDF and convert it into **STRUCTURED MARKDOWN**.
     
+    ${toneInstruction}
+
     **🚫 STRICT EXCLUSION RULES (DELETE THESE):**
     1. **LEGAL:** Remove copyright (©), "All rights reserved", disclaimers, addresses, fax, emails, websites in footers.
     2. **METADATA:** Remove document IDs, revision dates, "Original Instructions".

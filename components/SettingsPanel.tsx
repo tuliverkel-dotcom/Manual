@@ -240,16 +240,16 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ config, setConfig, disabl
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Štýl textu</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Typ obsahu / Dĺžka</label>
           <select
             disabled={disabled}
             value={config.tone}
             onChange={(e) => setConfig({ ...config, tone: e.target.value as any })}
             className="w-full border-gray-300 border rounded-md shadow-sm p-2 text-sm focus:ring-brand-500 focus:border-brand-500"
           >
-            <option value="professional">Profesionálny</option>
-            <option value="technical">Technický (Strohý)</option>
-            <option value="simplified">Zjednodušený (Pre laikov)</option>
+            <option value="professional">Kompletný manuál (Štandard)</option>
+            <option value="simplified">Stručný výťah (Pre laikov - max 50 str.)</option>
+            <option value="technical">Plne technický (Pre inžinierov)</option>
           </select>
         </div>
       </div>

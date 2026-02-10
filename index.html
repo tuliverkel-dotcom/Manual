@@ -107,41 +107,62 @@
           visibility: visible !important;
         }
 
-        /* MAIN CONTENT LAYOUT */
+        /* MAIN CONTENT LAYOUT - COMPACT & PROFESSIONAL */
         .print-content {
           width: 100% !important;
           max-width: none !important;
           margin: 0 !important;
           padding: 0 !important;
           display: block !important;
-          font-size: 11pt !important;
-          line-height: 1.4 !important;
+          /* COMPACT FONT SIZE */
+          font-size: 9.5pt !important; 
+          line-height: 1.3 !important;
           color: black !important;
           box-shadow: none !important;
         }
 
-        /* REMOVE GAPS: Aggressive Gap Removal */
-        p, h1, h2, h3, h4, ul, ol, li, div {
+        /* REMOVE GAPS: Aggressive Gap Removal for Density */
+        p {
            margin-top: 0;
-           margin-bottom: 0.5em;
+           margin-bottom: 0.5em; /* Tighter paragraph spacing */
         }
 
-        /* HEADINGS: Keep with text */
-        h1, h2, h3 {
+        /* HEADINGS: Keep with text, tighter margins */
+        h1, h2, h3, h4 {
           break-after: avoid !important;
           page-break-after: avoid !important;
-          margin-top: 1.5em !important;
+          margin-top: 1.2em !important;
+          margin-bottom: 0.4em !important;
+          line-height: 1.1 !important;
+        }
+
+        h1 { font-size: 18pt !important; }
+        h2 { font-size: 14pt !important; }
+        h3 { font-size: 11pt !important; }
+
+        /* LISTS */
+        ul, ol {
           margin-bottom: 0.5em !important;
+          padding-left: 1.2em !important;
+        }
+        li {
+          margin-bottom: 0.2em !important;
         }
 
         /* TABLES & LISTS */
-        table, ul, ol, .manual-table-root {
+        table, .manual-table-root {
           break-inside: auto !important;
           page-break-inside: auto !important;
           display: table !important;
+          margin-bottom: 0.8em !important;
+          font-size: 8.5pt !important; /* Smaller text in tables */
         }
         
-        tr, li, .toc-row {
+        td, th {
+          padding: 4px 6px !important; /* Tighter table cells */
+        }
+        
+        tr, .toc-row {
           break-inside: avoid !important;
           page-break-inside: avoid !important;
         }
@@ -150,7 +171,13 @@
         figure, img, .image-block {
           break-inside: avoid !important;
           page-break-inside: avoid !important;
-          margin-bottom: 1em !important;
+          margin-bottom: 0.8em !important;
+        }
+        
+        /* BLOCKQUOTES (Info/Warning) */
+        blockquote, .alert-box {
+           padding: 0.5em !important;
+           margin: 0.5em 0 !important;
         }
 
         /* Explicit Page Breaks */
