@@ -69,18 +69,15 @@
       /* --- FINAL PRINT FIXES --- */
       @media print {
         @page {
-          /* Force A4 Portrait */
-          size: A4 portrait; 
-          /* CRITICAL: Set margins to 0 to allow full-bleed cover page */
-          margin: 0;
+          size: A4 portrait; /* Force Portrait */
+          margin: 15mm; /* SAFE STANDARD MARGINS */
         }
 
         html, body {
-          width: 210mm;
-          height: 100%;
+          background: white;
+          width: 100%;
           margin: 0;
           padding: 0;
-          background: white;
         }
 
         /* Hide UI elements */
@@ -93,34 +90,34 @@
           visibility: visible;
         }
 
-        /* COVER PAGE SPECIFICS - STRICT A4 DIMENSIONS */
+        /* COVER PAGE SPECIFICS */
         .print-cover {
           break-after: page !important;
           page-break-after: always !important;
-          width: 210mm !important;
-          height: 297mm !important;
-          position: relative;
-          top: 0;
-          left: 0;
-          margin: 0 !important;
-          padding: 0 !important;
-          overflow: hidden !important;
+          /* Use safe height that fits within the 15mm margins (approx 260-270mm max) */
+          height: 265mm !important; 
+          width: 100% !important;
           display: flex !important;
           flex-direction: column;
+          position: relative;
+          visibility: visible !important;
+        }
+        
+        .print-cover * {
+          visibility: visible !important;
         }
 
         /* MAIN CONTENT LAYOUT */
         .print-content {
-          position: relative;
-          width: 210mm !important;
+          width: 100% !important;
+          max-width: none !important;
           margin: 0 !important;
-          /* Since @page margin is 0, we MUST add padding here for text content */
-          padding: 20mm 15mm 20mm 15mm !important; 
+          padding: 0 !important;
           display: block !important;
           font-size: 11pt !important;
           line-height: 1.4 !important;
           color: black !important;
-          box-sizing: border-box !important;
+          box-shadow: none !important;
         }
 
         /* REMOVE GAPS: Aggressive Gap Removal */

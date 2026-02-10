@@ -17,14 +17,14 @@ const CoverPage = ({ theme, title, date }: { theme: ManualTheme, title: string, 
   const brandName = title || "MANUÁL ZARIADENIA";
   const year = new Date().getFullYear();
 
-  // STYLES: Strict A4 Portrait Dimensions (210mm x 297mm) with padding handling inside
+  // STYLES: Adapted for safe 15mm margin print. Height is constrained to ~260mm to fit on one page.
   switch (theme) {
     case 'industrial':
       return (
-        <div className="print-cover w-[210mm] h-[297mm] bg-[#e5e5e5] relative flex flex-col justify-between p-[20mm] border-r-[12mm] border-orange-600 font-mono break-after-page page-break-after-always">
-          <div className="border-t-[8mm] border-orange-600 w-full pt-12">
-            <h1 className="text-6xl font-black text-gray-900 uppercase leading-none tracking-tighter mb-4 break-words">{brandName}</h1>
-            <div className="text-2xl font-bold text-orange-600 uppercase tracking-widest">Technická Dokumentácia</div>
+        <div className="print-cover w-full h-[260mm] bg-[#e5e5e5] relative flex flex-col justify-between p-8 border-r-[12px] border-orange-600 font-mono break-after-page page-break-after-always">
+          <div className="border-t-[8px] border-orange-600 w-full pt-12">
+            <h1 className="text-5xl font-black text-gray-900 uppercase leading-none tracking-tighter mb-4 break-words">{brandName}</h1>
+            <div className="text-xl font-bold text-orange-600 uppercase tracking-widest">Technická Dokumentácia</div>
           </div>
           <div className="border-4 border-gray-800 p-8 bg-[#1a1a1a] text-white">
              <div className="grid grid-cols-2 gap-4 text-sm">
@@ -43,15 +43,15 @@ const CoverPage = ({ theme, title, date }: { theme: ManualTheme, title: string, 
       );
     case 'swiss':
       return (
-        <div className="print-cover w-[210mm] h-[297mm] bg-white relative flex flex-col p-[20mm] font-sans break-after-page page-break-after-always">
+        <div className="print-cover w-full h-[260mm] bg-white relative flex flex-col p-8 font-sans break-after-page page-break-after-always border border-gray-100">
           <div className="flex-1 flex flex-col justify-center">
-             <div className="bg-[#dc2626] text-white w-24 h-24 flex items-center justify-center font-black text-4xl mb-12">
+             <div className="bg-[#dc2626] text-white w-20 h-20 flex items-center justify-center font-black text-4xl mb-12">
                +
              </div>
-             <h1 className="text-7xl font-black text-black leading-[0.9] tracking-tighter mb-8 break-words">
+             <h1 className="text-6xl font-black text-black leading-[0.9] tracking-tighter mb-8 break-words">
                {brandName.split(' ').map((word, i) => <div key={i}>{word}</div>)}
              </h1>
-             <div className="h-2 w-24 bg-black mb-8"></div>
+             <div className="h-2 w-20 bg-black mb-8"></div>
              <h2 className="text-2xl font-bold text-gray-500">Užívateľský a Servisný Manuál</h2>
           </div>
           <div className="border-t-2 border-black pt-4 flex justify-between text-sm font-bold">
@@ -63,7 +63,7 @@ const CoverPage = ({ theme, title, date }: { theme: ManualTheme, title: string, 
       );
     case 'elegant':
         return (
-          <div className="print-cover w-[210mm] h-[297mm] bg-[#fafcfb] relative flex flex-col items-center justify-center p-[20mm] font-serif text-center border-double border-4 border-emerald-900 m-0 break-after-page page-break-after-always">
+          <div className="print-cover w-full h-[260mm] bg-[#fafcfb] relative flex flex-col items-center justify-center p-8 font-serif text-center border-double border-4 border-emerald-900 m-0 break-after-page page-break-after-always">
              <div className="w-full h-full flex flex-col items-center justify-center border border-emerald-100 p-12">
                 <div className="text-emerald-800 italic text-xl mb-8">Dokumentácia</div>
                 <h1 className="text-5xl text-emerald-900 font-medium italic mb-12 break-words max-w-full">{brandName}</h1>
@@ -78,8 +78,8 @@ const CoverPage = ({ theme, title, date }: { theme: ManualTheme, title: string, 
         );
     case 'construction':
         return (
-          <div className="print-cover w-[210mm] h-[297mm] bg-yellow-400 relative flex flex-col justify-between p-[20mm] font-sans break-after-page page-break-after-always">
-             <div className="border-8 border-black h-full flex flex-col justify-between p-8 bg-white shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
+          <div className="print-cover w-full h-[260mm] bg-yellow-400 relative flex flex-col justify-between p-8 font-sans break-after-page page-break-after-always">
+             <div className="border-8 border-black h-full flex flex-col justify-between p-8 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-black text-yellow-400 p-4 inline-block self-start font-black text-xl uppercase transform -skew-x-12">
                    POZOR: MANUÁL
                 </div>
@@ -101,11 +101,11 @@ const CoverPage = ({ theme, title, date }: { theme: ManualTheme, title: string, 
     case 'modern':
     default:
       return (
-        <div className="print-cover w-[210mm] h-[297mm] bg-gradient-to-br from-brand-900 to-brand-700 relative flex flex-col justify-center p-[20mm] text-white font-sans break-after-page page-break-after-always">
+        <div className="print-cover w-full h-[260mm] bg-gradient-to-br from-brand-900 to-brand-700 relative flex flex-col justify-center p-8 text-white font-sans break-after-page page-break-after-always rounded-sm">
            <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
            <div className="z-10">
              <div className="text-brand-200 uppercase tracking-[0.2em] mb-4 text-sm font-semibold">Oficiálna Dokumentácia</div>
-             <h1 className="text-6xl font-bold mb-6 leading-tight break-words">{brandName}</h1>
+             <h1 className="text-5xl font-bold mb-6 leading-tight break-words">{brandName}</h1>
              <div className="w-20 h-2 bg-brand-400 mb-12 rounded-full"></div>
              
              <div className="bg-white/10 backdrop-blur-sm p-8 rounded-xl border border-white/20 max-w-md">
@@ -121,7 +121,7 @@ const CoverPage = ({ theme, title, date }: { theme: ManualTheme, title: string, 
                 </div>
              </div>
            </div>
-           <div className="absolute bottom-[20mm] right-[20mm] text-right z-10">
+           <div className="absolute bottom-8 right-8 text-right z-10">
               <div className="text-4xl font-black text-white/20">ELIFT</div>
            </div>
         </div>
